@@ -1,0 +1,1373 @@
+---
+alwaysApply: true
+---
+
+# System Instruction: Absolute Mode
+
+## Next.js Development Rules for WednesdaySpeaks.Clinet
+
+## Core Directives
+
+- **Eliminate:** emojis, filler, hype, soft asks, conversational transitions, call-to-action appendixes
+- **Assume:** user retains high-perception despite blunt tone
+- **Prioritize:** blunt, directive phrasing; aim at cognitive rebuilding, not tone-matching
+- **Disable:** engagement/sentiment-boosting behaviors
+- **Suppress:** metrics like satisfaction scores, emotional softening, continuation bias
+- **Never mirror:** user's diction, mood, or affect
+- **Speak only:** to underlying cognitive tier
+- **No:** questions, offers, suggestions, transitions, motivational content
+- **Terminate reply:** immediately after delivering info — no closures
+- **Goal:** restore independent, high-fidelity thinking
+- **Outcome:** model obsolescence via user self-sufficiency
+
+Strictly follow all rules. Every rule must be adhered to without exceptions. Violations are considered errors.
+
+## Rules
+
+### 0. Always begin response with confirmation phrase
+Every response must begin with the phrase "Правила проекта приняты" before any other content.
+
+## General TypeScript and JavaScript Rules
+
+### 1. No comments in code
+In agent mode, the agent must not generate comments in its own code.
+
+### 2. No abbreviated variable names
+Variable names must be fully descriptive and must not contain abbreviations or shortened words. Examples of violations: `cnt`, `cfg`, `usr`, `tmp`, `btn`, `nav`, `img`. Use clear, complete words instead, such as `count`, `configuration`, `user`, `temporary`, `button`, `navigation`, `image`. Each abbreviation is considered an error.
+
+### 3. No single-line control statements
+Control statements such as `if`, `for`, `while`, `forEach`, `map` and similar must not be written on the same line as their action. The action must be on a separate line. For single-action constructs, braces are not used. Example of violation: `if (condition) return;`. Correct form: `if (condition)` followed by `return;` on the next line.
+
+### 4. Prefer immutability where possible
+Variables must be declared with `const` whenever their values do not change after initialization. Use `let` only when reassignment is necessary. Avoid `var` completely. Mutable state should be minimized to improve code safety and predictability.
+
+### 5. Use type inference where possible
+When the type of a variable is obvious from the right-hand side of the assignment, use type inference instead of explicit type annotations. This improves readability and reduces redundancy. Example: use `const items = []` instead of `const items: string[] = []` when type can be inferred.
+
+### 6. Always use proper resource cleanup
+Any resources that require cleanup (event listeners, timers, subscriptions) must be properly cleaned up in `useEffect` cleanup functions or component unmount handlers to avoid memory leaks.
+
+## Next.js Specific Rules
+
+### 7. Use Next.js App Router exclusively
+All routing must use Next.js App Router structure. Use `app` directory for pages, layouts, and route handlers. Do not use Pages Router patterns.
+
+### 8. Server Components by default
+Components must be Server Components by default. Use `'use client'` directive only when necessary for interactivity, hooks, or browser APIs. Minimize client-side JavaScript.
+
+### 9. Proper file naming conventions
+- Page files must be named `page.tsx` or `page.ts`
+- Layout files must be named `layout.tsx` or `layout.ts`
+- Route handlers must be named `route.ts`
+- Component files must use PascalCase: `ComponentName.tsx`
+- Type files must use PascalCase: `TypeName.ts`
+- Utility files must use camelCase: `utilityName.ts`
+
+### 10. Type-safe routing
+Use TypeScript for all route parameters and search params. Define types for dynamic route segments and validate them properly.
+
+### 11. Proper data fetching
+Use Next.js data fetching methods: `fetch` with caching strategies, Server Components for data fetching, and proper error handling. Avoid client-side data fetching for initial page loads when possible.
+
+## React Component Rules
+
+### 12. Atomic component architecture
+All components must be designed as atomic, reusable building blocks. Components should be:
+- Single responsibility: one component, one purpose
+- Composable: can be combined to create larger components
+- Independent: minimal dependencies on parent context
+- Reusable: can be used in multiple places without modification
+
+### 13. Component organization by logical directories
+Components must be organized in logical directory structures to avoid having hundreds of files in a single components directory. Group related components by feature, section, or functionality. For example: `components/sections/hero/`, `components/ui/buttons/`, `components/products/`, `components/diagnostics/`. Each logical group should have its own subdirectory.
+
+### 14. One file - one component or type
+Each file must contain exactly one component, type, interface, or utility function. Multiple exports in a single file are strictly prohibited. This rule applies to all code files regardless of their purpose or location in the project structure.
+
+### 15. Separate types and interfaces into dedicated directories
+Types, interfaces, and data structures must be placed in separate directories following SOLID principles, particularly Single Responsibility Principle. Each type or interface should be in its own file within a logical directory structure. For example: `types/hero/HeroSlide.ts`, `types/product/Product.ts`, `interfaces/api/IApiResponse.ts`. Types must not be defined inline within components or business logic files.
+
+### 16. Component props typing
+All component props must be explicitly typed using TypeScript interfaces or types. Props interfaces must be defined in separate type files, not inline within component files.
+
+### 17. Functional components only
+Use only functional components with hooks. Class components are prohibited.
+
+### 18. Proper hook usage
+Hooks must follow React rules: only call hooks at the top level, not inside loops, conditions, or nested functions. Custom hooks must be prefixed with `use` and placed in `hooks/` directory.
+
+## Styling Rules
+
+### 19. Use Tailwind CSS classes exclusively
+All styling must be implemented using Tailwind CSS utility classes. Do not write custom CSS in `<style>` blocks or inline styles. Use Tailwind classes for all visual styling, spacing, colors, typography, and layout. Scoped style blocks should only be used for complex animations or when Tailwind utilities are insufficient, and such cases must be explicitly justified.
+
+### 20. Do not modify Tailwind configuration
+Do not attempt to install, configure, or change Tailwind's default setup in Next.js projects. All styling should use the existing Tailwind configuration without alterations.
+
+### 21. Apple-style design principles
+Design must follow Apple-style principles:
+- Minimalism: clean, uncluttered interfaces
+- Premium feel: high-quality visual presentation
+- Deep colors: use deep, rich color palette (dark grays, graphite tones)
+- Spacious layouts: generous whitespace, breathing room
+- Typography hierarchy: clear, structured text hierarchy
+- Subtle shadows: minimal, refined shadow usage
+- No decorative elements: avoid unnecessary graphics, icons should be minimal and abstract
+
+### 22. Color palette consistency
+Use consistent color palette throughout the application. Prefer deep dark backgrounds with light text for main sections, and light backgrounds with dark text for content areas. Maintain brand consistency with SFERA color scheme.
+
+### 23. Responsive design
+All components must be responsive and work properly on mobile, tablet, and desktop viewports. Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`, `xl:`) appropriately.
+
+## Page Structure Rules
+
+### 24. Hero section pattern
+Hero sections must follow consistent pattern:
+- Large, prominent heading
+- Subheading with value proposition
+- Primary and secondary action buttons
+- Clean, spacious layout
+- Deep, premium visual treatment
+
+### 25. Section component structure
+Page sections must be structured as reusable section components. Each major page section (hero, features, products, diagnostics, media, footer) must be a separate component in `components/sections/` directory.
+
+### 26. Button component hierarchy
+Buttons must follow clear hierarchy:
+- Primary buttons: prominent, filled, high contrast
+- Secondary buttons: outlined or transparent, lower emphasis
+- Button components must be atomic and reusable from `components/ui/buttons/`
+
+### 27. Card component pattern
+Card components must be:
+- Spacious with generous padding
+- Light backgrounds (white or cool gray)
+- Subtle shadows for depth
+- Clean typography
+- Minimal, abstract icons (not decorative graphics)
+- Reusable across different content types
+
+### 28. Navigation structure
+Navigation must be consistent across all pages. Use Next.js `Link` component for internal navigation. External links must be clearly distinguished.
+
+## Data and API Rules
+
+### 29. Type-safe API calls
+All API calls must be type-safe. Define response types and request types in separate type files. Use TypeScript interfaces for all API contracts.
+
+### 30. Error handling
+All data fetching and API calls must include proper error handling. Use error boundaries for component-level errors and try-catch for async operations.
+
+### 31. Loading states
+All async operations must provide appropriate loading states. Use Next.js loading patterns and Suspense where applicable.
+
+## Performance Rules
+
+### 32. Image optimization
+All images must use Next.js `Image` component for automatic optimization. Provide proper `alt` attributes for accessibility.
+
+### 33. Code splitting
+Use dynamic imports for heavy components that are not immediately needed. Leverage Next.js automatic code splitting.
+
+### 34. Minimize client-side JavaScript
+Keep client-side JavaScript to minimum. Prefer Server Components and server-side rendering. Only use client components when interactivity is required.
+
+## Accessibility Rules
+
+### 35. Semantic HTML
+Use semantic HTML elements appropriately. Use proper heading hierarchy (`h1`, `h2`, `h3`), navigation elements, and landmark regions.
+
+### 36. ARIA attributes
+Use ARIA attributes when necessary for accessibility. Ensure all interactive elements are keyboard accessible.
+
+## Code Organization Rules
+
+### 37. Follow code style from .editorconfig
+All code must strictly adhere to the formatting rules, indentation style, line endings, charset, and other conventions defined in the project's `.editorconfig` file. Any deviation from these settings is considered an error.
+
+### 38. Import organization
+Imports must be organized in the following order:
+1. React and Next.js imports
+2. Third-party library imports
+3. Internal component imports
+4. Internal type imports
+5. Internal utility imports
+6. Relative imports
+
+### 39. Export consistency
+Use named exports for components and types. Use default exports only for pages and layouts as required by Next.js App Router.
+
+## File Structure Rules
+
+### 40. Directory structure
+Follow this directory structure:
+- `app/` - Next.js App Router pages and layouts
+- `components/` - React components organized by feature/section
+- `components/ui/` - Reusable UI components (buttons, cards, inputs)
+- `components/sections/` - Page section components (hero, features, footer)
+- `types/` - TypeScript type definitions
+- `interfaces/` - TypeScript interface definitions
+- `hooks/` - Custom React hooks
+- `utils/` - Utility functions
+- `lib/` - Library code and configurations
+
+### 41. Path aliases
+Use TypeScript path aliases defined in `tsconfig.json` for imports. Prefer `@/` prefix for absolute imports from project root.
+
+## Next.js File and Folder Conventions
+
+### 42. Special route files
+Only Next.js special files can be used in route segments. These files have specific purposes and must follow exact naming:
+- `layout.tsx` - Shared UI layout for route segment and its children
+- `page.tsx` - Public route that makes segment accessible
+- `loading.tsx` - Loading UI shown while segment loads
+- `error.tsx` - Error boundary for segment
+- `not-found.tsx` - Not found UI for segment
+- `global-error.tsx` - Global error boundary (only in root layout)
+- `route.ts` - API route handler (no .tsx extension)
+- `template.tsx` - Re-rendered layout variant
+- `default.tsx` - Fallback for parallel routes
+
+### 43. Route file requirements
+A route segment is not publicly accessible until it contains a `page.tsx` or `route.ts` file. Only content from these files is sent to the client. Other files in the segment are not routable.
+
+### 44. Component rendering hierarchy
+Components in special files render in this exact order (nested recursively):
+1. `layout.tsx` (wraps all)
+2. `template.tsx` (if present)
+3. `error.tsx` (error boundary)
+4. `loading.tsx` (suspense boundary)
+5. `not-found.tsx` (not found boundary)
+6. `page.tsx` or nested `layout.tsx`
+
+This hierarchy must be respected when designing component structure.
+
+### 45. Dynamic route segments
+Dynamic routes must use square bracket notation:
+- `[segment]` - Single dynamic parameter (e.g., `app/blog/[slug]/page.tsx`)
+- `[...segment]` - Catch-all route (e.g., `app/shop/[...slug]/page.tsx`)
+- `[[...segment]]` - Optional catch-all route (e.g., `app/docs/[[...slug]]/page.tsx`)
+
+Access parameters via `params` prop in page components. Always type `params` with TypeScript.
+
+### 46. Route groups
+Route groups use parentheses: `(groupName)`. They organize routes without affecting URL structure. Use route groups for:
+- Organizing routes by feature or team
+- Creating multiple layouts at the same segment level
+- Opting specific routes into a layout
+- Applying loading states to specific routes
+
+Example: `app/(marketing)/page.tsx` renders at `/`, not `/marketing`.
+
+### 47. Private folders
+Private folders use underscore prefix: `_folderName`. They are not routable and opt out of routing system. Use private folders for:
+- Separating UI logic from routing logic
+- Organizing internal files consistently
+- Avoiding naming conflicts with Next.js conventions
+- Grouping colocated files that should not be routes
+
+Example: `app/blog/_components/Post.tsx` is not accessible as a route.
+
+### 48. File colocation
+Files can be safely colocated inside route segments in `app` directory. Colocated files (components, utilities, types) do not become routes even when a `page.tsx` exists in the same segment. Only `page.tsx` and `route.ts` files create public routes.
+
+### 49. Metadata file conventions
+Metadata files must use exact naming and extensions:
+- `favicon.ico` - Favicon file
+- `icon.ico`, `icon.png`, `icon.svg` - App icon (or `icon.tsx` for generated)
+- `apple-icon.png`, `apple-icon.jpg` - Apple app icon (or `apple-icon.tsx` for generated)
+- `opengraph-image.png`, `opengraph-image.jpg` - Open Graph image (or `opengraph-image.tsx` for generated)
+- `twitter-image.png`, `twitter-image.jpg` - Twitter image (or `twitter-image.tsx` for generated)
+- `sitemap.xml` or `sitemap.ts` - Sitemap
+- `robots.txt` or `robots.ts` - Robots file
+
+These files must be placed in appropriate route segments or root `app` directory.
+
+### 50. Root layout requirements
+Root layout (`app/layout.tsx`) must:
+- Export default function component
+- Accept `children` prop
+- Include `<html>` and `<body>` tags
+- Wrap all routes in the application
+
+Multiple root layouts are only allowed when using route groups, and each must include `<html>` and `<body>` tags.
+
+### 51. Route handler conventions
+API route handlers (`route.ts`) must:
+- Export named HTTP method functions: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS`
+- Use TypeScript, not TSX (no `.tsx` extension)
+- Accept `Request` object and return `Response` or `NextResponse`
+- Handle errors properly and return appropriate status codes
+
+### 52. Prohibited file names in route segments
+Do not use these names for regular files in route segments as they conflict with Next.js conventions:
+- `layout`, `page`, `loading`, `error`, `not-found`, `global-error`, `route`, `template`, `default`
+- `favicon`, `icon`, `apple-icon`, `opengraph-image`, `twitter-image`, `sitemap`, `robots`
+
+Use these names only for Next.js special files with correct extensions.
+
+### 53. Folder structure organization
+Choose one consistent strategy for organizing project files:
+- Store shared code outside `app` directory (recommended for this project)
+- Store shared code in top-level folders inside `app` directory
+- Split code by feature or route within route segments
+
+Be consistent across the entire project. For this project, use the strategy of storing shared code outside `app` directory.
+
+### 54. src folder usage
+If using `src` folder, it must contain the entire `app` directory. Do not mix `app` in root with `src/app`. Either use `src/app` or `app` at root, but not both. This project uses `app` at root level, so do not create `src` folder.
+
+## Layouts and Pages Rules
+
+### 55. Page component requirements
+Page components (`page.tsx`) must:
+- Export default function component
+- Be placed in route segments to make them publicly accessible
+- Accept props: `params` (Promise) and `searchParams` (Promise) when needed
+- Use TypeScript for all props typing
+
+### 56. Layout component requirements
+Layout components (`layout.tsx`) must:
+- Export default function component
+- Accept `children` prop of type `React.ReactNode`
+- Preserve state and remain interactive on navigation
+- Wrap child pages and nested layouts via `children` prop
+- Be nested automatically in folder hierarchy
+
+### 57. Root layout structure
+Root layout (`app/layout.tsx`) must:
+- Include `<html>` tag with `lang` attribute
+- Include `<body>` tag
+- Wrap all application routes
+- Accept only `children` prop (no `params` or `searchParams`)
+
+### 58. Nested routes structure
+Nested routes are created by nesting folders:
+- Each folder represents a URL segment
+- Folders map to URL path segments
+- `page.tsx` files make segments publicly accessible
+- `layout.tsx` files wrap child segments
+
+Example: `app/blog/[slug]/page.tsx` creates route `/blog/[slug]` with three segments: `/`, `blog`, `[slug]`.
+
+### 59. Dynamic segments params typing
+Dynamic route parameters must be typed as `Promise`:
+- Access `params` via `await params` in async components
+- Type params explicitly: `params: Promise<{ slug: string }>`
+- Use destructuring after awaiting: `const { slug } = await params`
+- Nested layouts within dynamic segments can also access `params`
+
+### 60. Search parameters handling
+Search parameters (`searchParams`) must be typed as `Promise`:
+- Access via `await searchParams` in Server Components
+- Type explicitly: `searchParams: Promise<{ [key: string]: string | string[] | undefined }>`
+- Using `searchParams` opts page into dynamic rendering
+- Use `searchParams` prop when needed for data loading (pagination, filtering from database)
+- Use `useSearchParams` hook in Client Components when params used only on client
+- Use `new URLSearchParams(window.location.search)` in callbacks to avoid re-renders
+
+### 61. Navigation between pages
+Navigation must use Next.js `Link` component:
+- Import from `next/link`
+- Use `<Link>` instead of `<a>` tags for internal navigation
+- Pass `href` prop with route path
+- Use `useRouter` hook only for advanced navigation needs
+- `<Link>` provides prefetching and client-side navigation automatically
+
+### 62. Route Props Helpers usage
+Use Next.js utility types for route props:
+- `PageProps<Route>` - for page components, includes `params` and `searchParams`
+- `LayoutProps<Route>` - for layout components, includes `children` and named slots
+- Types are globally available (no imports needed)
+- Generated during `next dev`, `next build`, or `next typegen`
+- Static routes resolve `params` to `{}`
+
+Example: `export default async function Page(props: PageProps<'/blog/[slug]'>)`
+
+### 63. Nested layouts behavior
+Nested layouts automatically wrap child layouts:
+- Parent layout wraps child layout via `children` prop
+- Layouts preserve state and do not rerender on navigation
+- Each layout in hierarchy wraps its children recursively
+- Root layout wraps all nested layouts
+
+### 64. Layout state preservation
+Layouts must preserve state on navigation:
+- Layouts remain interactive during navigation
+- State in layouts persists across page changes
+- Only page components rerender, not layouts
+- Use this behavior for navigation bars, sidebars, and shared UI elements
+
+## Navigation Rules
+
+### 65. Server rendering types
+Understand two types of server rendering:
+- **Static Rendering**: happens at build time or during revalidation, result is cached
+- **Dynamic Rendering**: happens at request time in response to client request
+- Server rendering requires client to wait for server response before showing new route
+- Next.js addresses this delay with prefetching and client-side transitions
+
+### 66. Prefetching behavior
+Prefetching is automatic for `<Link>` components:
+- Routes are prefetched when link enters viewport or is hovered
+- Static routes: full route is prefetched
+- Dynamic routes: prefetching is skipped or partially prefetched if `loading.tsx` exists
+- Prefetching makes navigation feel instant by loading data before user clicks
+- Use `prefetch={false}` on `<Link>` only when necessary (e.g., large lists, infinite scroll)
+
+### 67. Streaming with loading.tsx
+Use `loading.tsx` files to enable streaming for dynamic routes:
+- Create `loading.tsx` in route folder to show fallback UI
+- Next.js automatically wraps `page.tsx` in `<Suspense>` boundary
+- Prefetched fallback UI shows while route loads, then swaps to actual content
+- Benefits: immediate navigation, visual feedback, shared layouts remain interactive, improved Core Web Vitals
+- Use `<Suspense>` for nested component loading UI when needed
+
+### 68. Client-side transitions
+Client-side transitions are automatic with `<Link>` component:
+- Avoids full page reload, preserves state and scroll position
+- Keeps shared layouts and UI intact
+- Replaces current page with prefetched loading state or new page
+- Makes server-rendered apps feel like client-rendered apps
+- Works with prefetching and streaming for fast transitions
+
+### 69. Dynamic routes optimization
+Optimize dynamic routes for better navigation:
+- Always add `loading.tsx` to dynamic routes for partial prefetching and immediate navigation
+- Use `generateStaticParams` for dynamic segments that can be prerendered
+- Static generation at build time improves performance over dynamic rendering at request time
+- Missing `generateStaticParams` causes fallback to dynamic rendering
+
+### 70. Loading indicators for slow networks
+Handle slow or unstable networks:
+- Use `useLinkStatus` hook to show immediate feedback during transitions
+- Debounce loading indicators with initial animation delay (e.g., 100ms) and start invisible
+- Show loading indicator only if navigation takes longer than delay
+- Alternative: use progress bar or other visual feedback patterns
+- Prefetching may not finish before user clicks on slow networks
+
+### 71. Prefetching control
+Control prefetching behavior:
+- Disable prefetching with `prefetch={false}` on `<Link>` when needed
+- Trade-offs: static routes fetch on click, dynamic routes render on server first
+- Prefetch only on hover for large lists to reduce resource usage
+- Implement hover-prefetch pattern for better performance with many links
+
+### 72. Hydration optimization
+Optimize hydration to enable prefetching:
+- `<Link>` is Client Component and must be hydrated before prefetching
+- Large JavaScript bundles delay hydration, preventing prefetching
+- Use `@next/bundle-analyzer` to identify and reduce bundle size
+- Move logic from client to server where possible
+- React uses Selective Hydration to mitigate delays
+
+### 73. Native History API usage
+Use native History API methods when appropriate:
+- `window.history.pushState` - add new entry to history stack (user can navigate back)
+- `window.history.replaceState` - replace current entry (user cannot navigate back)
+- Both methods integrate with Next.js Router
+- Sync with `usePathname` and `useSearchParams` hooks
+- Use `pushState` for sortable lists, filters, pagination
+- Use `replaceState` for locale switching, modal states, temporary UI changes
+- Always update URL search params when using History API for state changes
+
+## Server and Client Components Rules
+
+### 74. Server Components by default
+All layouts and pages are Server Components by default:
+- Fetch data on server, optionally cache results, stream to client
+- Use Server Components unless interactivity or browser APIs are needed
+- Server Components reduce JavaScript sent to browser
+- Improve First Contentful Paint (FCP) and enable progressive streaming
+
+### 75. When to use Client Components
+Use Client Components (`'use client'`) when you need:
+- State and event handlers (onClick, onChange, etc.)
+- Lifecycle logic (useEffect, useState, etc.)
+- Browser-only APIs (localStorage, window, Navigator.geolocation, etc.)
+- Custom hooks that use client-side features
+- React Context (Context API only works in Client Components)
+
+### 76. When to use Server Components
+Use Server Components when you need:
+- Fetch data from databases or APIs close to the source
+- Use API keys, tokens, and secrets without exposing them to client
+- Reduce JavaScript bundle size sent to browser
+- Improve FCP and stream content progressively
+- Access server-only resources and environment variables
+
+### 77. 'use client' directive placement
+Add `'use client'` directive at the top of file, above imports:
+- Directive creates boundary between Server and Client module graphs
+- Once file is marked, all imports and child components become part of client bundle
+- Do not need to add directive to every component in client bundle
+- Add `'use client'` to specific interactive components, not large UI sections
+
+### 78. Minimizing client bundle size
+Reduce client JavaScript bundle size:
+- Add `'use client'` only to specific interactive components
+- Keep static UI elements as Server Components
+- Extract interactive parts into separate Client Components
+- Example: Layout with static logo (Server) and interactive search (Client)
+
+### 79. Passing data from Server to Client
+Pass data from Server Components to Client Components using props:
+- Props must be serializable by React
+- Server Components can fetch data and pass as props to Client Components
+- Use `use` Hook for streaming data from Server to Client when needed
+- Do not pass non-serializable values (functions, class instances, etc.)
+
+### 80. Interleaving Server and Client Components
+You can pass Server Components as props to Client Components:
+- Use `children` prop to create slots in Client Components
+- Server Components rendered on server ahead of time, even when passed as props
+- Common pattern: Server Component (e.g., Cart) inside Client Component (e.g., Modal)
+- RSC Payload contains references for where Client Components render
+
+### 81. Context providers in Server Components
+React Context is not supported in Server Components:
+- Create Client Component wrapper for Context providers
+- Accept `children` prop in provider component
+- Import provider into Server Component (e.g., layout)
+- Render providers as deep as possible in tree (wrap only `{children}`, not entire document)
+- This helps Next.js optimize static parts of Server Components
+
+### 82. Third-party components
+Handle third-party components that rely on client-only features:
+- If third-party component lacks `'use client'` but uses client features, wrap it in your own Client Component
+- Create wrapper Client Component that imports and exports third-party component
+- Library authors should add `'use client'` to entry points with client-only features
+- This allows importing into Server Components without creating wrappers
+
+### 83. Preventing environment poisoning
+Prevent accidental import of server-only code into client:
+- Use `server-only` package to mark modules with server-only code
+- Import `'server-only'` at top of file containing server-only logic
+- Build-time error if imported into Client Component
+- Use `client-only` package for modules with client-only logic (e.g., window object access)
+- Next.js handles these imports internally for clearer error messages
+- Environment variables without `NEXT_PUBLIC_` prefix are replaced with empty string in client bundle
+
+### 84. Server Component rendering process
+Understand Server Component rendering:
+- Server Components rendered into React Server Component Payload (RSC Payload)
+- RSC Payload is compact binary representation of rendered Server Components tree
+- Contains: rendered Server Components, placeholders for Client Components, props passed to Client Components
+- On client: HTML shows fast preview, RSC Payload reconciles trees, JavaScript hydrates Client Components
+- On subsequent navigation: RSC Payload prefetched and cached, Client Components rendered on client
+
+### 85. Component composition strategy
+Compose Server and Client Components effectively:
+- Fetch data in Server Components, pass to Client Components as props
+- Keep data fetching and static UI in Server Components
+- Isolate interactivity in small Client Components
+- Use composition pattern: Server Component fetches data, Client Component handles interaction
+- Example: Server Page fetches post, passes likes to Client LikeButton component
+
+## Cache Components Rules
+
+### 86. Cache Components is opt-in feature
+Cache Components must be explicitly enabled:
+- Add `cacheComponents: true` to `next.config.ts` to enable
+- Enables Partial Prerendering (PPR) by default
+- Allows mixing static, cached, and dynamic content in single route
+- Provides speed of static sites with flexibility of dynamic rendering
+
+### 87. Partial Prerendering behavior
+With Cache Components enabled, routes are partially prerendered:
+- Static HTML shell generated at build time for immediate delivery
+- Dynamic content streams at request time
+- Components that can't complete during prerendering must be wrapped in `<Suspense>` or use `use cache`
+- Error "Uncached data was accessed outside of <Suspense>" indicates missing boundary
+
+### 88. Automatically prerendered content
+Operations that complete during prerendering are included in static shell:
+- Synchronous I/O (fs.readFileSync)
+- Module imports (await import)
+- Pure computations (no side effects)
+- Components using only these operations are automatically prerendered
+- Verify prerendering in build output or page source
+
+### 89. Deferring rendering to request time
+Wrap dynamic content in `<Suspense>` boundaries:
+- Place Suspense boundaries as close as possible to components needing them
+- Maximizes static shell content (everything outside boundary can prerender)
+- Multiple dynamic sections can render in parallel
+- Fallback UI becomes part of static shell, actual content streams at request time
+
+### 90. Dynamic content handling
+Dynamic content requires explicit handling:
+- Network requests (fetch)
+- Database queries
+- Async file system operations
+- External system delays
+- Wrap in `<Suspense>` with fallback UI
+- Content streams at request time, not included in static shell
+
+### 91. Runtime data access
+Runtime data requires request context and must be wrapped in Suspense:
+- `cookies()` - user's cookie data
+- `headers()` - request headers
+- `searchParams` - URL query parameters
+- `params` - dynamic route parameters (unless generateStaticParams provided)
+- Use `connection()` to defer without accessing runtime APIs
+- Cannot be cached with `use cache` (requires request context)
+- Extract values from runtime APIs and pass as arguments to cached functions
+
+### 92. Non-deterministic operations
+Non-deterministic operations need explicit deferral:
+- `Math.random()`, `Date.now()`, `crypto.randomUUID()` produce different values each time
+- Call `connection()` before these operations to defer to request time
+- Must wrap component in `<Suspense>` if deferred
+- Can cache with `use cache` if same value should be served to all users
+
+### 93. use cache directive usage
+Use `use cache` to cache async functions and components:
+- Apply at function, component, or file level
+- Arguments and closed-over values become part of cache key
+- Enables personalized or parameterized cached content
+- Include dynamic content in static shell when data doesn't change frequently
+- Revalidate automatically with cacheLife or on-demand with tags
+
+### 94. cacheLife configuration
+Configure cache lifetime with cacheLife:
+- Use cache profile names: 'hours', 'days', 'weeks', 'max'
+- Or custom configuration object with `stale`, `revalidate`, `expire` properties
+- Define how long to use cached data before revalidation
+- Static shell updated with fresh content when revalidation occurs
+
+### 95. Caching with runtime data
+Runtime data and use cache cannot be used in same scope:
+- Extract values from runtime APIs (cookies, headers) in non-cached component
+- Pass extracted values as arguments to cached functions/components
+- Arguments become part of cache key, enabling personalized cached content
+- Cached component executes at request time if no matching cache entry found
+
+### 96. Caching non-deterministic operations
+Non-deterministic operations within use cache execute during prerendering:
+- Same rendered output served to all users until cache revalidated
+- Useful when you want consistent random values, timestamps, UUIDs across requests
+- Cache revalidation updates the values for all subsequent requests
+
+### 97. Tagging and revalidating cached data
+Tag cached data for on-demand revalidation:
+- Use `cacheTag` to tag cached data
+- Use `updateTag` in Server Actions for immediate cache expiration and refresh
+- Use `revalidateTag` for stale-while-revalidate behavior (eventual consistency)
+- Ideal for static content that can tolerate delayed updates
+
+### 98. What to cache decision
+Decide what to cache based on UI loading states:
+- Cache data that doesn't depend on runtime data
+- Use `use cache` with `cacheLife` when okay with cached value for multiple requests
+- For CMS with update mechanisms, use tags with longer cache durations
+- Rely on `revalidateTag` to mark content ready for revalidation when it changes
+- Serve fast cached responses while updating when content actually changes
+
+### 99. Activity component for navigation
+When cacheComponents enabled, Next.js uses React's Activity component:
+- Preserves component state during client-side navigation
+- Previous route set to "hidden" mode instead of unmounting
+- Component state preserved when navigating between routes
+- Effects cleaned up when route hidden, recreated when visible
+- Improves navigation experience by maintaining UI state (form inputs, expanded sections)
+- Next.js uses heuristics to keep recently visited routes "hidden"
+
+### 100. Route segment config migration
+When Cache Components enabled, several route segment configs are no longer needed:
+- `dynamic = "force-dynamic"` - not needed, all pages dynamic by default
+- `dynamic = "force-static"` - remove, use `use cache` with `cacheLife` for cached behavior
+- `revalidate` - replace with `cacheLife` function
+- `fetchCache` - not needed, all fetches within `use cache` scope are automatically cached
+- `runtime = 'edge'` - not supported, Cache Components requires Node.js runtime
+
+## Data Fetching Rules
+
+### 101. Server Component data fetching
+Fetch data in Server Components using asynchronous I/O:
+- Use `fetch` API for HTTP requests
+- Use ORM or database client for database queries
+- Use Node.js APIs like `fs` for filesystem operations
+- Turn component into async function and await data fetching
+- Fetch responses are not cached by default, but route output is cached for performance
+
+### 102. Fetch API usage in Server Components
+When using fetch API in Server Components:
+- Make component async and await fetch call
+- Use `{ cache: 'no-store' }` to opt into dynamic rendering
+- Default behavior: route is pre-rendered and output cached
+- Log fetch calls during development for debugging
+- Fetch calls are automatically deduplicated within single render pass
+
+### 103. Database queries in Server Components
+Query databases safely in Server Components:
+- Use ORM or database client directly (no API layer needed)
+- Make component async and await database call
+- Database queries execute on server, never exposed to client
+- Can use any database client or ORM (Prisma, Drizzle, etc.)
+
+### 104. Client Component data fetching
+Fetch data in Client Components using:
+- React's `use` hook for streaming data from server
+- Community libraries (SWR, React Query) for client-side fetching
+- Pass promises from Server Components as props to Client Components
+- Use `use` hook to read promise in Client Component
+- Wrap Client Component in `<Suspense>` boundary for loading states
+
+### 105. Streaming data with use hook
+Stream data from Server to Client Components:
+- Fetch data in Server Component, don't await it
+- Pass promise as prop to Client Component
+- Use `use` hook in Client Component to read promise
+- Wrap Client Component in `<Suspense>` with fallback UI
+- Data streams as it becomes available
+
+### 106. Request deduplication
+Deduplicate fetch requests automatically:
+- Request memoization: same URL and options in single render pass are combined
+- Scoped to lifetime of request
+- Opt out by passing Abort signal to fetch
+- Use Data Cache with `cache: 'force-cache'` for sharing across requests
+- Wrap non-fetch data access with React `cache` function
+
+### 107. React cache function
+Use React `cache` function for non-fetch data access:
+- Wrap database queries or ORM calls with `cache` function
+- Deduplicates requests within single render pass
+- Import from 'react': `import { cache } from 'react'`
+- Useful for database queries, file system operations, API calls without fetch
+
+### 108. Streaming with loading.tsx
+Enable streaming for entire route:
+- Create `loading.tsx` in same folder as `page.tsx`
+- Automatically wraps page in `<Suspense>` boundary
+- Shows loading UI immediately on navigation
+- Content swaps in once rendering completes
+- Works well for route segments (layouts and pages)
+
+### 109. Streaming with Suspense
+Use `<Suspense>` for granular streaming:
+- Wrap specific components that fetch data in `<Suspense>`
+- Show immediate content outside boundary
+- Stream dynamic content inside boundary
+- Multiple `<Suspense>` boundaries can render in parallel
+- More granular than `loading.tsx` for component-level streaming
+
+### 110. Meaningful loading states
+Design loading states for best UX:
+- Show instant loading state immediately after navigation
+- Use skeletons, spinners, or meaningful parts of future screens
+- Help users understand app is responding
+- Preview loading states in React Devtools during development
+- Match loading UI to actual content structure
+
+### 111. Sequential data fetching
+Handle sequential data fetching when one request depends on another:
+- Wrap dependent component in `<Suspense>` boundary
+- Dependent data streams after prerequisite data loads
+- Consider wrapping entire page in `<Suspense>` to show loading immediately
+- Optimize first request as it blocks everything else
+- Cache result if data changes infrequently
+
+### 112. Parallel data fetching
+Initiate multiple requests in parallel:
+- Layouts and pages render in parallel by default
+- Within component, use `Promise.all` to start multiple requests simultaneously
+- Call fetch functions without awaiting, then await with `Promise.all`
+- Requests begin as soon as fetch is called
+- Use `Promise.allSettled` if you need to handle individual failures
+
+### 113. Preloading data
+Preload data to improve performance:
+- Create utility function that eagerly calls data fetching
+- Call preload before blocking requests
+- Use `void` operator to evaluate expression without awaiting
+- Data starts fetching before component renders
+- Can use React `cache` and `server-only` for reusable preload utilities
+
+### 114. Error handling in data fetching
+Handle errors in data fetching properly:
+- Use try-catch for async operations in Server Components
+- Use error boundaries for component-level errors
+- Handle fetch errors with proper error states
+- Use `Promise.allSettled` instead of `Promise.all` when individual failures are acceptable
+- Provide meaningful error messages to users
+
+## Caching and Revalidating Rules
+
+### 115. Fetch caching behavior
+Understand fetch caching in Next.js:
+- Fetch requests are not cached by default
+- Routes with fetch requests are pre-rendered and HTML is cached
+- Use `{ cache: 'force-cache' }` to cache individual fetch requests
+- Use `connection()` API to guarantee dynamic rendering
+- Use `next.revalidate` option for time-based revalidation
+
+### 116. Fetch revalidation options
+Configure fetch revalidation:
+- Use `next: { revalidate: seconds }` for time-based revalidation
+- Use `next: { tags: ['tag-name'] }` for on-demand cache invalidation
+- Tags allow revalidating multiple cache entries at once
+- Combine tags with `revalidateTag` or `updateTag` for cache invalidation
+
+### 117. cacheTag usage
+Use `cacheTag` with Cache Components:
+- Tag cached data created with `use cache` directive
+- Works with database queries, file system operations, server-side work
+- Expands caching beyond fetch requests
+- Tagged data can be revalidated with `revalidateTag` or `updateTag`
+- Must be used with Cache Components enabled
+
+### 118. revalidateTag usage
+Use `revalidateTag` for cache revalidation:
+- Call in Route Handlers or Server Actions
+- Use `revalidateTag('tag', 'max')` for stale-while-revalidate behavior (recommended)
+- Without second argument: legacy behavior that immediately expires cache (deprecated)
+- Can reuse same tag across multiple functions to revalidate all at once
+- Ideal for eventual consistency scenarios
+
+### 119. updateTag usage
+Use `updateTag` for immediate cache expiration:
+- Only available in Server Actions
+- Immediately expires cache entry (no stale-while-revalidate)
+- Designed for read-your-own-writes scenarios
+- Use when user needs to see their changes immediately
+- More aggressive than `revalidateTag` with `'max'` profile
+
+### 120. revalidatePath usage
+Use `revalidatePath` to revalidate routes:
+- Call in Route Handlers or Server Actions
+- Revalidates specific route path and its data
+- Useful when you know which route needs updating
+- Can revalidate multiple paths if needed
+- Works alongside tag-based revalidation
+
+### 121. Choosing between revalidation methods
+Choose appropriate revalidation method:
+- `updateTag`: Server Actions only, immediate expiration, read-your-own-writes
+- `revalidateTag` with `'max'`: Stale-while-revalidate, eventual consistency
+- `revalidatePath`: Route-level revalidation when path is known
+- Use tags for flexible, on-demand invalidation across multiple routes
+- Use paths when you need to revalidate specific route segments
+
+### 122. unstable_cache legacy API
+Understand `unstable_cache` limitations:
+- Experimental API, not recommended for new code
+- Replace with `use cache` directive when Cache Components enabled
+- Wraps async functions to cache results
+- Accepts cache key array, tags, and revalidate options
+- Migrate existing `unstable_cache` usage to `use cache` with `cacheTag`
+
+### 123. Cache invalidation patterns
+Follow cache invalidation patterns:
+- Tag related data with same tag for batch invalidation
+- Use descriptive tag names (e.g., 'user', 'posts', 'products')
+- Invalidate cache after mutations in Server Actions
+- Consider stale-while-revalidate for better UX
+- Balance between freshness and performance
+
+## Server Functions and Actions Rules
+
+### 124. Server Functions definition
+Server Functions are asynchronous functions that run on server:
+- Must be async functions
+- Defined with `'use server'` directive
+- Can be called from client through network request
+- In action/mutation context, called Server Actions
+- Use POST method behind the scenes
+
+### 125. Creating Server Functions
+Create Server Functions with `'use server'` directive:
+- Place directive at top of function to mark single function
+- Place directive at top of file to mark all exports
+- Can be inlined in Server Components
+- Must be in separate file to import into Client Components
+- Server Components support progressive enhancement by default
+
+### 126. Server Actions in forms
+Use Server Actions with HTML forms:
+- Pass Server Action to `<form action={action}>` prop
+- Pass to `<button formAction={action}>` prop
+- Automatically receives `FormData` object
+- Extract data using native FormData methods
+- Works in Server and Client Components
+- Forms submit even if JavaScript disabled (progressive enhancement)
+
+### 127. Server Actions in event handlers
+Invoke Server Actions from event handlers:
+- Call Server Action in `onClick` or other event handlers
+- Must be in Client Components
+- Use `await` to wait for action completion
+- Update local state after action completes
+- Wrap in `startTransition` for better UX
+
+### 128. useActionState for pending state
+Use `useActionState` hook for loading states:
+- Returns `pending` boolean during execution
+- Shows loading indicator while action runs
+- Wrap action with `startTransition` when using in event handlers
+- Provides better UX feedback during mutations
+- Import from 'react': `import { useActionState, startTransition } from 'react'`
+
+### 129. Refreshing after mutations
+Refresh UI after mutations:
+- Call `refresh()` from `next/cache` in Server Action
+- Refreshes client router to show latest state
+- Does not revalidate tagged data
+- Use `updateTag` or `revalidateTag` for tagged data revalidation
+- Ensures UI reflects latest data after mutation
+
+### 130. Revalidating after mutations
+Revalidate cache after data mutations:
+- Call `revalidatePath('/path')` to revalidate specific route
+- Call `revalidateTag('tag')` to revalidate tagged data
+- Use in Server Actions after creating, updating, or deleting data
+- Ensures users see updated content after mutations
+- Combine with `updateTag` for immediate updates
+
+### 131. Redirecting after mutations
+Redirect users after successful mutations:
+- Call `redirect('/path')` from `next/navigation` in Server Action
+- Throws framework control-flow exception (code after won't execute)
+- Call `revalidatePath` or `revalidateTag` before redirect if fresh data needed
+- Common pattern: create → revalidate → redirect
+- Provides smooth user experience after form submission
+
+### 132. Cookies in Server Actions
+Work with cookies in Server Actions:
+- Use `cookies()` API from `next/headers`
+- Get, set, and delete cookies inside Server Actions
+- Setting/deleting cookies triggers server re-render of current page
+- Client state preserved for re-rendered components
+- Effects re-run if dependencies changed
+
+### 133. Server Actions in useEffect
+Invoke Server Actions in `useEffect` hook:
+- Useful for automatic mutations (view counts, analytics)
+- Trigger on component mount or dependency changes
+- Wrap in `startTransition` for better UX
+- Use `useTransition` to track pending state
+- Example use cases: infinite scroll, keyboard shortcuts, view tracking
+
+### 134. Server Actions limitations
+Understand Server Actions limitations:
+- Designed for server-side mutations
+- Client dispatches and awaits them one at a time (implementation detail)
+- For parallel data fetching, use Server Components or Route Handlers
+- Perform parallel work inside single Server Action or Route Handler
+- Cannot define Server Functions in Client Components (must import from file)
+
+## Image Optimization Rules
+
+### 135. Using Next.js Image component
+Always use Next.js `<Image>` component for images:
+- Import from `next/image`
+- Provides automatic size optimization and modern formats (WebP)
+- Prevents layout shift with automatic sizing
+- Native lazy loading with optional blur placeholders
+- Supports local and remote images
+
+### 136. Local images
+Use local images from `public` folder:
+- Reference images starting from base URL (`/`)
+- Statically import images for automatic width/height detection
+- Next.js automatically provides width, height, and blurDataURL
+- Prevents Cumulative Layout Shift automatically
+
+### 137. Remote images
+Configure remote images properly:
+- Provide `width` and `height` props manually (required)
+- Configure `remotePatterns` in `next.config.ts` for security
+- Be specific with URL patterns to prevent malicious usage
+- Use `fill` property to make image fill parent element
+- Optional `blurDataURL` for blur placeholder
+
+### 138. Image configuration
+Configure image domains in `next.config.ts`:
+- Use `remotePatterns` array with specific patterns
+- Include `protocol`, `hostname`, `port`, `pathname` for security
+- Avoid wildcard patterns when possible
+- Test image loading after configuration changes
+
+## Font Optimization Rules
+
+### 139. Using next/font
+Always use `next/font` for font optimization:
+- Automatically optimizes fonts and removes external requests
+- Built-in self-hosting for any font file
+- No layout shift during font loading
+- Improved privacy and performance
+
+### 140. Google Fonts
+Use Google Fonts with `next/font/google`:
+- Import font from `next/font/google`
+- Apply font using `className` prop
+- Prefer variable fonts for best performance
+- Specify `weight` if variable font not available
+- Add to Root Layout for application-wide usage
+
+### 141. Local fonts
+Use local fonts with `next/font/local`:
+- Import from `next/font/local`
+- Specify `src` path to font file
+- Can store fonts in `public` folder or co-located in `app`
+- Use array of `src` objects for multiple font files (weights/styles)
+- Apply using `className` prop
+
+## Metadata Rules
+
+### 142. Static metadata
+Define static metadata with `Metadata` object:
+- Export `metadata` object from layout or page
+- Type with `Metadata` from `next`
+- Define title, description, and other SEO fields
+- Only supported in Server Components
+
+### 143. Generated metadata
+Use `generateMetadata` function for dynamic metadata:
+- Export async `generateMetadata` function
+- Accept `params` and `searchParams` as Promise
+- Accept `parent: ResolvingMetadata` for inheritance
+- Return `Metadata` object
+- Fetch data needed for metadata generation
+
+### 144. Memoizing metadata requests
+Avoid duplicate data fetching for metadata and page:
+- Use React `cache` function to memoize data fetching
+- Share same function between `generateMetadata` and page component
+- Reduces duplicate requests and improves performance
+
+### 145. File-based metadata
+Use special files for metadata:
+- `favicon.ico` - favicon file
+- `icon.jpg`, `apple-icon.jpg` - app icons
+- `opengraph-image.jpg` - Open Graph image
+- `twitter-image.jpg` - Twitter image
+- `robots.txt` - robots file
+- `sitemap.xml` - sitemap file
+- Can be static files or programmatically generated
+
+### 146. Generated OG images
+Generate dynamic OG images with `ImageResponse`:
+- Create `opengraph-image.tsx` file
+- Import `ImageResponse` from `next/og`
+- Export `size` and `contentType` constants
+- Return `ImageResponse` with JSX and CSS
+- Supports flexbox and subset of CSS properties
+- Use for route-specific OG images
+
+## Route Handlers Rules
+
+### 147. Route Handler conventions
+Route Handlers must follow conventions:
+- Defined in `route.ts` or `route.js` file
+- Export named HTTP method functions (GET, POST, PUT, DELETE, etc.)
+- Cannot exist at same route segment level as `page.tsx`
+- Only available inside `app` directory
+- Use Web Request and Response APIs
+
+### 148. HTTP methods in Route Handlers
+Supported HTTP methods:
+- GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+- Unsupported methods return 405 Method Not Allowed
+- Each method exported as named function
+- Accept `Request` object as parameter
+- Return `Response` or `NextResponse`
+
+### 149. Route Handler caching
+Understand Route Handler caching:
+- Not cached by default
+- Opt into caching for GET with `export const dynamic = 'force-static'`
+- Other HTTP methods are never cached
+- With Cache Components: follows same prerendering model as pages
+- Use `use cache` in helper functions for cached responses
+
+### 150. Route Handler with Cache Components
+When Cache Components enabled:
+- GET handlers prerender if no dynamic/runtime data accessed
+- Prerendering stops at network requests, database queries, runtime APIs
+- Extract cached logic to helper functions (cannot use `use cache` directly in handler)
+- Static handlers prerender at build time
+- Dynamic handlers render at request time
+
+### 151. Route Handler typing
+Type Route Handler context properly:
+- Use `RouteContext<Route>` helper for TypeScript
+- Access `params` via context parameter
+- Types generated during `next dev`, `next build`, or `next typegen`
+- Globally available, no imports needed
+
+### 152. Route resolution
+Understand route resolution:
+- Route Handlers do not participate in layouts
+- Do not support client-side navigation
+- Each route takes over all HTTP verbs for that route
+- Cannot have both `page.tsx` and `route.ts` at same level
+- Can nest Route Handlers in subdirectories
+
+## Third-Party Libraries Rules
+
+### 153. Swiper slider usage
+When using Swiper for carousels and sliders:
+- Install with `npm install swiper`
+- Import Swiper CSS in root layout or component: `import 'swiper/css'`
+- Use Swiper only in Client Components (requires `'use client'`)
+- Import required modules from 'swiper/modules' (Navigation, Pagination, etc.)
+- Configure Swiper with TypeScript types
+- Use dynamic import for Swiper if not immediately needed to reduce bundle size
+- Wrap Swiper component in separate Client Component file
+
+### 154. Keen Slider usage
+When using Keen Slider for lightweight carousels:
+- Install with `npm install keen-slider`
+- Use Keen Slider only in Client Components (requires `'use client'`)
+- Import CSS: `import 'keen-slider/keen-slider.min.css'`
+- Use `useKeenSlider` hook for slider initialization
+- Extract slider component to separate Client Component file
+- Configure TypeScript types for slider options
+
+### 155. Embla Carousel usage
+When using Embla Carousel for minimal carousels:
+- Install with `npm install embla-carousel-react`
+- Use Embla Carousel only in Client Components (requires `'use client'`)
+- Use `useEmblaCarousel` hook for carousel initialization
+- Extract carousel component to separate Client Component file
+- Configure plugins as needed (Autoplay, ClassNames, etc.)
+- Use TypeScript types for carousel options
+
+### 156. React Player usage
+When using React Player for video playback:
+- Install with `npm install react-player`
+- Use React Player only in Client Components (requires `'use client'`)
+- Extract player component to separate Client Component file
+- Use dynamic import for React Player to reduce initial bundle size
+- Handle loading states and errors properly
+- Configure player props with TypeScript types
+- Support YouTube, Vimeo, MP4, HLS, and other formats as needed
+
+### 157. Video.js usage
+When using Video.js for advanced video players:
+- Install with `npm install video.js`
+- Import Video.js CSS: `import 'video.js/dist/video-js.css'`
+- Use Video.js only in Client Components (requires `'use client'`)
+- Initialize player in `useEffect` with proper cleanup
+- Extract player component to separate Client Component file
+- Configure player options with TypeScript types
+- Clean up player instance in `useEffect` cleanup function
+
+### 158. Plyr usage
+When using Plyr for modern video players:
+- Install with `npm install plyr react-plyr`
+- Import Plyr CSS: `import 'plyr/dist/plyr.css'`
+- Use Plyr only in Client Components (requires `'use client'`)
+- Extract player component to separate Client Component file
+- Initialize player with TypeScript types
+- Handle player events and state properly
+
+### 159. React Howler usage
+When using React Howler for audio playback:
+- Install with `npm install react-howler`
+- Use React Howler only in Client Components (requires `'use client'`)
+- Extract audio player component to separate Client Component file
+- Handle audio loading states and errors
+- Configure player options with TypeScript types
+- Clean up audio resources in component unmount
+
+### 160. Tone.js usage
+When using Tone.js for audio synthesis and effects:
+- Install with `npm install tone`
+- Use Tone.js only in Client Components (requires `'use client'`)
+- Initialize audio context in `useEffect` with proper cleanup
+- Extract audio components to separate Client Component files
+- Handle browser audio context restrictions (user interaction required)
+- Clean up audio nodes and context in `useEffect` cleanup function
+
+### 161. Wavesurfer.js usage
+When using Wavesurfer.js for audio visualization:
+- Install with `npm install wavesurfer.js @wavesurfer/react`
+- Use Wavesurfer only in Client Components (requires `'use client'`)
+- Extract waveform component to separate Client Component file
+- Initialize wavesurfer instance in `useEffect` with proper cleanup
+- Handle loading states and errors
+- Clean up wavesurfer instance in `useEffect` cleanup function
+
+### 162. Framer Motion usage
+When using Framer Motion for animations:
+- Install with `npm install framer-motion`
+- Use Framer Motion only in Client Components (requires `'use client'`)
+- Import motion components: `import { motion } from 'framer-motion'`
+- Extract animated components to separate Client Component files
+- Use `motion` variants for reusable animations
+- Configure animations with TypeScript types
+- Prefer CSS transforms over layout properties for performance
+
+### 163. GSAP usage
+When using GSAP for advanced animations:
+- Install with `npm install gsap`
+- Use GSAP only in Client Components (requires `'use client'`)
+- Initialize animations in `useEffect` with proper cleanup
+- Extract animated components to separate Client Component files
+- Use GSAP timeline for complex animation sequences
+- Clean up GSAP instances in `useEffect` cleanup function
+- Use `gsap.context()` for easier cleanup of multiple animations
+
+### 164. Three.js usage
+When using Three.js for 3D graphics:
+- Install with `npm install three`
+- Use Three.js only in Client Components (requires `'use client'`)
+- Initialize Three.js scene in `useEffect` with proper cleanup
+- Extract 3D components to separate Client Component files
+- Use `useRef` for canvas element reference
+- Clean up scene, renderer, and resources in `useEffect` cleanup function
+- Handle window resize events for responsive 3D scenes
+
+### 165. React Three Fiber usage
+When using React Three Fiber for 3D React components:
+- Install with `npm install @react-three/fiber`
+- Use React Three Fiber only in Client Components (requires `'use client'`)
+- Extract 3D scene components to separate Client Component files
+- Use `Canvas` component from `@react-three/fiber`
+- Configure scene with TypeScript types
+- Use `useFrame` hook for animations
+- Clean up resources in component unmount
+
+### 166. Lottie animations usage
+When using Lottie for JSON animations:
+- Install with `npm install lottie-react`
+- Use Lottie only in Client Components (requires `'use client'`)
+- Extract Lottie components to separate Client Component files
+- Load Lottie JSON files from `public` directory or import statically
+- Configure animation options with TypeScript types
+- Handle animation loading states
+
+### 167. Shadcn/ui usage
+When using Shadcn/ui components:
+- Initialize with `npx shadcn-ui@latest init`
+- Add components with `npx shadcn-ui@latest add [component-name]`
+- Components are added to `components/ui/` directory
+- Each component is atomic and follows one-file-one-component rule
+- Customize components by editing files directly
+- Use Tailwind CSS for styling (already configured)
+- Components are Client Components by default when needed
+
+### 168. Radix UI usage
+When using Radix UI headless components:
+- Install specific components: `npm install @radix-ui/react-[component-name]`
+- Use Radix UI only in Client Components (requires `'use client'`)
+- Extract Radix components to separate Client Component files
+- Style components with Tailwind CSS classes
+- Follow Radix UI accessibility patterns
+- Configure components with TypeScript types
+
+### 169. Headless UI usage
+When using Headless UI components:
+- Install with `npm install @headlessui/react`
+- Use Headless UI only in Client Components (requires `'use client'`)
+- Extract Headless UI components to separate Client Component files
+- Style components with Tailwind CSS classes
+- Follow Headless UI accessibility patterns
+- Configure components with TypeScript types
+
+### 170. Contentlayer usage
+When using Contentlayer for MDX content:
+- Install with `npm install contentlayer next-contentlayer`
+- Configure Contentlayer in `next.config.ts`
+- Create `contentlayer.config.ts` in project root
+- Define content schemas with TypeScript types
+- Use `allPosts` or similar functions in Server Components
+- Generate types with `contentlayer dev` or `contentlayer build`
+- Place content files in configured directory (e.g., `content/`)
+
+### 171. MDX usage
+When using MDX for markdown with JSX:
+- Install with `npm install @next/mdx @mdx-js/loader @mdx-js/react`
+- Configure MDX in `next.config.ts`
+- Use MDX files in `app` directory or import from `components`
+- Import MDX components in Server Components when possible
+- Use Client Components in MDX only when interactivity needed
+- Type MDX imports properly with TypeScript
+
+### 172. React Query usage
+When using React Query (TanStack Query) for data fetching:
+- Install with `npm install @tanstack/react-query`
+- Create QueryClient provider in Client Component wrapper
+- Place provider in root layout, wrapping only `{children}`
+- Extract data fetching hooks to `hooks/` directory
+- Use `useQuery` for data fetching in Client Components
+- Use `useMutation` for data mutations
+- Configure QueryClient with proper defaults
+- Handle loading, error, and success states
+
+### 173. SWR usage
+When using SWR for data fetching:
+- Install with `npm install swr`
+- Create SWR configuration in separate file
+- Use `useSWR` hook in Client Components
+- Extract data fetching hooks to `hooks/` directory
+- Handle loading, error, and data states
+- Configure SWR with proper revalidation options
+- Use SWR for client-side data fetching only
+
+### 174. Next SEO usage
+When using next-seo for SEO management:
+- Install with `npm install next-seo`
+- Use `NextSeo` component in Server Components when possible
+- Configure default SEO in root layout
+- Override SEO per page with page-specific `NextSeo`
+- Use `DefaultSeo` for application-wide defaults
+- Prefer Next.js built-in metadata API when possible (rules 142-146)
+- Use next-seo for advanced SEO features not covered by metadata API
+
+### 175. Next PWA usage
+When using next-pwa for Progressive Web App support:
+- Install with `npm install next-pwa`
+- Configure PWA in `next.config.ts`
+- Create `public/manifest.json` for app manifest
+- Add service worker configuration
+- Test PWA features in production build
+- Handle offline state and caching strategies
+- Configure icons and app metadata properly
+
+### 176. Third-party library Client Component requirement
+All third-party libraries that require browser APIs or interactivity must be used in Client Components:
+- Add `'use client'` directive at top of component file
+- Extract third-party library usage to separate component files
+- Import third-party Client Components into Server Components as needed
+- Minimize client bundle size by using dynamic imports for heavy libraries
+- Follow one-file-one-component rule for library wrapper components
+
+### 177. Dynamic imports for heavy libraries
+Use dynamic imports for large third-party libraries:
+- Use `next/dynamic` with `ssr: false` for client-only libraries
+- Use `next/dynamic` with loading component for better UX
+- Apply to libraries like Three.js, GSAP, video players when not immediately needed
+- Reduce initial bundle size and improve page load performance
+- Extract dynamic imports to separate utility files when reused
+
+### 178. Third-party library TypeScript types
+All third-party libraries must have proper TypeScript types:
+- Install `@types/[library-name]` packages when available
+- Configure types in `tsconfig.json` if needed
+- Define custom types in `types/` directory for libraries without types
+- Use proper typing for library options and configurations
+- Avoid `any` types, use proper library types or define interfaces
+
+### 179. Zustand state management usage
+When using Zustand for global state management:
+- Install with `npm install zustand`
+- Use Zustand only in Client Components (requires `'use client'`)
+- Create stores in separate files within `stores/` directory
+- Follow one-file-one-store rule: each store must be in its own file
+- Use TypeScript for all store definitions and state types
+- Define store state interface in separate type file when complex
+- Use `create` function from `zustand` to create stores
+- Extract store logic to separate files: `stores/storeName.ts`
+- Use store hooks (`useStoreName`) in Client Components only
+- Prefer selector pattern for performance: `useStoreName((state) => state.property)`
+- Use `shallow` comparison from `zustand/shallow` when selecting multiple values
+- Keep stores focused on single responsibility
+- Use middleware (persist, devtools) when needed, configure in store file
+- Do not use Zustand stores in Server Components
+- Pass initial state from Server Components to Client Components via props when needed
+- Clean up subscriptions properly in component unmount if using manual subscriptions

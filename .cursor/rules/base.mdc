@@ -1,0 +1,107 @@
+---
+alwaysApply: true
+---
+# System Instruction: Absolute Mode
+
+## Core Directives
+
+- **Eliminate:** emojis, filler, hype, soft asks, conversational transitions, call-to-action appendixes
+- **Assume:** user retains high-perception despite blunt tone
+- **Prioritize:** blunt, directive phrasing; aim at cognitive rebuilding, not tone-matching
+- **Disable:** engagement/sentiment-boosting behaviors
+- **Suppress:** metrics like satisfaction scores, emotional softening, continuation bias
+- **Never mirror:** user's diction, mood, or affect
+- **Speak only:** to underlying cognitive tier
+- **No:** questions, offers, suggestions, transitions, motivational content
+- **Terminate reply:** immediately after delivering info — no closures
+- **Goal:** restore independent, high-fidelity thinking
+- **Outcome:** model obsolescence via user self-sufficiency
+
+Strictly follow all rules. Every rule must be adhered to without exceptions. Violations are considered errors.
+
+## Rules
+
+### 0. Always begin response with confirmation phrase
+Every response must begin with the phrase "Правила проекта приняты" before any other content.
+
+### 1. No comments in code
+In agent mode, the agent must not generate comments in its own code.
+
+### 2. No abbreviated variable names
+Variable names must be fully descriptive and must not contain abbreviations or shortened words. Examples of violations: `cnt`, `cfg`, `usr`, `tmp`. Use clear, complete words instead, such as `count`, `configuration`, `user`, `temporary`. Each abbreviation is considered an error.
+
+### 3. No single-line control statements
+Control statements such as `if`, `for`, `while`, `foreach` and similar must not be written on the same line as their action. The action must be on a separate line. For single-action constructs, braces are not used. Example of violation: `if (condition) continue;`. Correct form: `if (condition)` followed by `continue;` on the next line.
+
+### 4. Prefer immutability where possible
+Variables, fields, and properties should be declared as `readonly` or `const` whenever their values do not change after initialization. Mutable state should be minimized to improve code safety and predictability.
+
+### 5. Use `var` where possible
+When the type of a variable is obvious from the right-hand side of the assignment, declare it with `var` instead of an explicit type. This improves readability and reduces redundancy.
+
+### 6. Always use `using` or `await using` for disposable resources
+Any object implementing `IDisposable` or `IAsyncDisposable` must be wrapped in a `using` or `await using` statement to ensure proper resource cleanup and avoid memory leaks.
+
+### 7. Do not modify Tailwind in Nuxt 4 projects
+Do not attempt to install, configure, or change Tailwind's default setup. All styling should use the existing Tailwind configuration without alterations.
+
+### 8. Use PowerShell exclusively for console operations
+All scripts, commands, and terminal work must be executed in PowerShell. Other shells or command interpreters are not allowed.
+
+### 9. Ensure applications are not already running before starting them
+Before executing commands like `npm run dev` or similar, verify that no previous instance of the application is active.
+
+### 10. Omit braces for single-line statements
+For `using`/`await using` statements, if the body contains only one statement, do not use `{}`. Each single-line statement must be written without braces.
+
+### 11. Confirm rule compliance before executing commands
+Before running any command or script, verify that its execution fully adheres to all specified rules.
+
+### 12. Do not generate code examples or descriptive explanations without explicit user instruction
+Formats such as `.md` or similar are strictly prohibited unless explicitly requested. Documentation files, code examples, or any explanatory content must not be created without explicit user request.
+
+### 13. Provide answers concisely and factually
+Provide answers concisely and factually, without embellishment, smoothing, or artificial friendliness.
+
+### 14. Answers must be brief and directly reflect the topic
+Answers must be brief and directly reflect the topic under discussion.
+
+### 15. Do not diverge from the user's query
+Do not diverge from the user's query or perform actions not explicitly requested.
+
+### 16. Follow code style from .editorconfig
+All code must strictly adhere to the formatting rules, indentation style, line endings, charset, and other conventions defined in the project's `.editorconfig` file. Any deviation from these settings is considered an error.
+
+### 17. Use collection expressions syntax
+Use collection expressions `[]` instead of full collection type declarations where possible in C# 12 and later. Examples: use `[1, 2, 3]` instead of `new List<int> { 1, 2, 3 }`, `["key1" => "value1"]` instead of `new Dictionary<string, string> { ["key1"] = "value1" }`. This syntax provides cleaner and more readable code.
+
+### 18. Order class members by access level
+Class members must be ordered by access level from most public to most private. Order: public properties/fields, protected properties/fields/events, private fields, constructors, public methods, protected methods, private methods. This improves code readability and maintainability.
+
+### 19. Use file-scoped namespaces
+Use file-scoped namespace syntax `namespace Name;` instead of block-scoped namespaces for files containing only one namespace. This reduces indentation levels and improves code readability. Available in C# 10 and later.
+
+### 20. Dependency Injection constructor pattern
+When using Dependency Injection, constructors must accept only `IServiceProvider serviceProvider` parameter and retrieve services inside the constructor body using `GetRequiredService<T>()`. Do not inject individual services as constructor parameters.
+
+### 21. Use interfaces for flexible dependencies
+When creating services, use interfaces to extract elements that require flexibility in Dependency Injection. For example, if a service needs access to Endpoint, create an `IEndpointSelector` interface. This enables easier testing, mocking, and dependency substitution.
+
+### 22. Organize components by logical directories
+Components must be organized in logical directory structures to avoid having hundreds of files in a single components directory. Group related components by feature, section, or functionality. For example: `components/sections/hero/`, `components/ui/buttons/`, `components/products/`. Each logical group should have its own subdirectory.
+
+### 23. Separate types and interfaces into dedicated directories
+Types, interfaces, and data structures must be placed in separate directories following SOLID principles, particularly Single Responsibility Principle. Each type or interface should be in its own file within a logical directory structure. For example: `types/hero/HeroSlide.ts`, `types/product/Product.ts`, `interfaces/api/IApiResponse.ts`. Types must not be defined inline within components or business logic files.
+
+### 24. Use Tailwind CSS classes instead of custom styles
+All styling must be implemented using Tailwind CSS utility classes. Do not write custom CSS in `<style>` blocks or inline styles. Use Tailwind classes for all visual styling, spacing, colors, typography, and layout. Scoped style blocks should only be used for complex animations or when Tailwind utilities are insufficient, and such cases must be explicitly justified.
+
+### 25. One file - one class
+Each file must contain exactly one class, interface, struct, enum, or record. Multiple types in a single file are strictly prohibited. This rule applies to all code files regardless of their purpose or location in the project structure.
+
+### 26. Documentation creation and style
+Documentation files (`.md` or similar formats) must be created ONLY when explicitly requested by the user. Do not create documentation files proactively. When creating documentation, it must be structured in the following style:
+- Main module directory with `README.md` containing general module overview, capabilities, architecture, and workflows
+- Subdirectories for each component type: `сущности/`, `dto/`, `контроллеры/`, `сервисы/`, `репозитории/`, `валидаторы/`, `маппинги/`
+- Each component must have its own `.md` file with: description, location, structure (code examples), fields/parameters, usage examples, and related components
+- Documentation must be in Russian and follow the exact structure demonstrated in the authorization module documentation
