@@ -33,16 +33,24 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 export const api = {
-  async getRaids(params?: { raidTypeId?: number; raidTypeName?: string; page?: number; pageSize?: number }): Promise<PagedResult<RaidDto>> {
+  async getRaids(params?: {
+    raidTypeId?: number;
+    raidTypeName?: string;
+    guildName?: string;
+    leaderName?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<PagedResult<RaidDto>> {
     const searchParams = new URLSearchParams();
-    if (params?.raidTypeId)
-      searchParams.append('raidTypeId', params.raidTypeId.toString());
-    if (params?.raidTypeName)
-      searchParams.append('raidTypeName', params.raidTypeName);
-    if (params?.page)
-      searchParams.append('page', params.page.toString());
-    if (params?.pageSize)
-      searchParams.append('pageSize', params.pageSize.toString());
+
+    if (params?.raidTypeId !== undefined) searchParams.append('raidTypeId', params.raidTypeId.toString());
+    if (params?.raidTypeName) searchParams.append('raidTypeName', params.raidTypeName);
+
+    if (params?.guildName) searchParams.append('guildName', params.guildName);
+    if (params?.leaderName) searchParams.append('leaderName', params.leaderName);
+
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString());
 
     return fetchApi(`/api/raids?${searchParams.toString()}`);
   },
@@ -98,6 +106,13 @@ export const api = {
     return fetchApi('/api/encounters/list');
   },
 
+  async getEncountersGroupedByRaid(): Promise<Array<{
+    raidTypeName: string;
+    encounters: Array<{ encounterEntry: string; encounterName: string | null }>;
+  }>> {
+    return fetchApi('/api/encounters/grouped-by-raid');
+  },
+
   async getPlayersByEncounter(params: { encounterName?: string; encounterEntry?: string; search?: string; characterClass?: string; role?: string; page?: number; pageSize?: number }): Promise<PagedResult<PlayerDto>> {
     const searchParams = new URLSearchParams();
     if (params.encounterName)
@@ -116,6 +131,10 @@ export const api = {
       searchParams.append('pageSize', params.pageSize.toString());
 
     return fetchApi(`/api/players/by-encounter?${searchParams.toString()}`);
+  },
+
+  async getRaidByEncounterId(encounterId: number): Promise<RaidDetailDto> {
+    return fetchApi(`/api/encounters/${encounterId}/raid`);
   },
 };
 

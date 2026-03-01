@@ -196,7 +196,7 @@ public sealed class PlayersController : ControllerBase
             .Include(pe => pe.Player)
             .Include(pe => pe.CharacterSpec)
             .Include(pe => pe.Encounter)
-            .Where(pe => pe.Player.CharacterClass == characterClass);
+            .Where(pe => pe.Player.CharacterClass == characterClass && pe.Encounter.Success == true);
 
         if (!string.IsNullOrWhiteSpace(spec))
             query = query.Where(pe => pe.CharacterSpec.Spec == spec);
@@ -213,8 +213,14 @@ public sealed class PlayersController : ControllerBase
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(pe => pe.Player.CharacterName.Contains(search));
 
+        var totalCount = await query.CountAsync(cancellationToken);
+
         var playerEncounters = await query
-            .OrderByDescending(pe => pe.Dps)
+            .OrderByDescending(pe => pe.Role == "2"
+                ? (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds > 0
+                    ? (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
+                    : 0
+                : pe.Dps)
             .ThenByDescending(pe => pe.DamageDone)
             .Select(pe => new
             {
@@ -231,84 +237,39 @@ public sealed class PlayersController : ControllerBase
                 pe.Dps,
                 pe.DamageDone,
                 pe.HealingDone,
+                pe.AbsorbProvided,
                 pe.MaxGearScore,
                 pe.Encounter.StartTime,
                 Duration = (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
             })
-            .ToListAsync(cancellationToken);
-
-        var grouped = playerEncounters
-            .GroupBy(pe => new
-            {
-                pe.PlayerId,
-                pe.CharacterName,
-                pe.CharacterClass,
-                pe.ClassName,
-                pe.CharacterRace,
-                pe.CharacterLevel
-            })
-            .Select(g => new
-            {
-                g.Key.PlayerId,
-                g.Key.CharacterName,
-                g.Key.CharacterClass,
-                g.Key.ClassName,
-                g.Key.CharacterRace,
-                g.Key.CharacterLevel,
-                BestDps = g.Max(pe => pe.Dps),
-                BestEncounter = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).First()
-                    : g.OrderByDescending(pe => pe.Dps).First(),
-                BestSpecName = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).First().SpecName ?? string.Empty
-                    : g.OrderByDescending(pe => pe.Dps).First().SpecName ?? string.Empty,
-                TotalEncounters = g.Count(),
-                TotalDamage = g.Sum(pe => pe.DamageDone),
-                TotalHealing = g.Sum(pe => pe.HealingDone),
-                AverageDps = g.Average(pe => pe.Dps)
-            })
-            .OrderByDescending(p => !string.IsNullOrWhiteSpace(role) && role == "2"
-                ? (p.BestEncounter.Duration > 0 ? (double)p.BestEncounter.HealingDone / p.BestEncounter.Duration : 0)
-                : p.BestDps)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
-        var totalCount = playerEncounters
-            .GroupBy(pe => pe.PlayerId)
-            .Count();
-
-        var players = grouped.Select((p, index) => new PlayerDto
+        var players = playerEncounters.Select((pe, index) => new PlayerDto
         {
-            Id = p.PlayerId,
-            CharacterName = p.CharacterName,
-            CharacterClass = p.CharacterClass,
-            ClassName = p.ClassName,
-            SpecName = p.BestSpecName,
-            CharacterRace = p.CharacterRace,
-            CharacterLevel = p.CharacterLevel,
-            TotalEncounters = p.TotalEncounters,
-            TotalDamage = p.TotalDamage,
-            TotalHealing = p.TotalHealing,
-            AverageDps = p.AverageDps,
-            MaxDps = p.BestDps,
+            Id = pe.PlayerId,
+            CharacterName = pe.CharacterName,
+            CharacterClass = pe.CharacterClass,
+            ClassName = pe.ClassName,
+            SpecName = pe.SpecName,
+            CharacterRace = pe.CharacterRace,
+            CharacterLevel = pe.CharacterLevel,
+            TotalEncounters = 1,
+            TotalDamage = pe.DamageDone,
+            TotalHealing = pe.HealingDone,
+            AverageDps = pe.Dps,
+            MaxDps = pe.Dps,
             Rank = (page - 1) * pageSize + index + 1,
-            EncounterDate = p.BestEncounter.StartTime,
-            EncounterDuration = (long)p.BestEncounter.Duration,
-            ItemLevel = p.BestEncounter.MaxGearScore,
-            EncounterId = p.BestEncounter.EncounterId,
-            Role = p.BestEncounter.Role,
-            MaxHps = p.BestEncounter.Role == "2" && p.BestEncounter.Duration > 0
-                ? (double)p.BestEncounter.HealingDone / p.BestEncounter.Duration
+            EncounterDate = pe.StartTime,
+            EncounterDuration = (long)pe.Duration,
+            ItemLevel = pe.MaxGearScore,
+            EncounterId = pe.EncounterId,
+            Role = pe.Role,
+            MaxHps = pe.Role == "2" && pe.Duration > 0
+                ? (double)(pe.HealingDone + pe.AbsorbProvided) / pe.Duration
                 : null
         }).ToList();
-
-        players = players.OrderByDescending(p => p.Role == "2" && p.MaxHps.HasValue ? p.MaxHps.Value : p.MaxDps).ToList();
-        
-        for (var i = 0; i < players.Count; i++)
-        {
-            players[i].Rank = (page - 1) * pageSize + i + 1;
-        }
 
         return Ok(new PagedResult<PlayerDto>
         {
@@ -334,6 +295,7 @@ public sealed class PlayersController : ControllerBase
             .Include(pe => pe.Player)
             .Include(pe => pe.CharacterSpec)
             .Include(pe => pe.Encounter)
+            .Where(pe => pe.Encounter.Success == true)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(encounterName))
@@ -351,8 +313,14 @@ public sealed class PlayersController : ControllerBase
         if (!string.IsNullOrWhiteSpace(role))
             query = query.Where(pe => pe.Role == role);
 
+        var totalCount = await query.CountAsync(cancellationToken);
+
         var playerEncounters = await query
-            .OrderByDescending(pe => pe.Dps)
+            .OrderByDescending(pe => pe.Role == "2"
+                ? (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds > 0
+                    ? (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
+                    : 0
+                : pe.Dps)
             .ThenByDescending(pe => pe.DamageDone)
             .Select(pe => new
             {
@@ -369,81 +337,39 @@ public sealed class PlayersController : ControllerBase
                 pe.Dps,
                 pe.DamageDone,
                 pe.HealingDone,
+                pe.AbsorbProvided,
                 pe.MaxGearScore,
                 pe.Encounter.StartTime,
                 Duration = (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
             })
-            .ToListAsync(cancellationToken);
-
-        var grouped = playerEncounters
-            .GroupBy(pe => new
-            {
-                pe.PlayerId,
-                pe.CharacterName,
-                pe.CharacterClass,
-                pe.ClassName,
-                pe.CharacterRace,
-                pe.CharacterLevel
-            })
-            .Select(g => new
-            {
-                g.Key.PlayerId,
-                g.Key.CharacterName,
-                g.Key.CharacterClass,
-                g.Key.ClassName,
-                g.Key.CharacterRace,
-                g.Key.CharacterLevel,
-                BestDps = g.Max(pe => pe.Dps),
-                BestEncounter = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).First()
-                    : g.OrderByDescending(pe => pe.Dps).First(),
-                BestSpecName = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).First().SpecName ?? string.Empty
-                    : g.OrderByDescending(pe => pe.Dps).First().SpecName ?? string.Empty,
-                TotalEncounters = g.Count()
-            })
-            .OrderByDescending(p => !string.IsNullOrWhiteSpace(role) && role == "2"
-                ? (p.BestEncounter.Duration > 0 ? (double)p.BestEncounter.HealingDone / p.BestEncounter.Duration : 0)
-                : p.BestDps)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
-        var totalCount = playerEncounters
-            .GroupBy(pe => pe.PlayerId)
-            .Count();
-
-        var players = grouped.Select((p, index) => new PlayerDto
+        var players = playerEncounters.Select((pe, index) => new PlayerDto
         {
-            Id = p.PlayerId,
-            CharacterName = p.CharacterName,
-            CharacterClass = p.CharacterClass,
-            ClassName = p.ClassName,
-            SpecName = p.BestSpecName,
-            CharacterRace = p.CharacterRace,
-            CharacterLevel = p.CharacterLevel,
-            TotalEncounters = p.TotalEncounters,
-            TotalDamage = p.BestEncounter.DamageDone,
-            TotalHealing = p.BestEncounter.HealingDone,
-            AverageDps = p.BestDps,
-            MaxDps = p.BestDps,
+            Id = pe.PlayerId,
+            CharacterName = pe.CharacterName,
+            CharacterClass = pe.CharacterClass,
+            ClassName = pe.ClassName,
+            SpecName = pe.SpecName,
+            CharacterRace = pe.CharacterRace,
+            CharacterLevel = pe.CharacterLevel,
+            TotalEncounters = 1,
+            TotalDamage = pe.DamageDone,
+            TotalHealing = pe.HealingDone,
+            AverageDps = pe.Dps,
+            MaxDps = pe.Dps,
             Rank = (page - 1) * pageSize + index + 1,
-            EncounterDate = p.BestEncounter.StartTime,
-            EncounterDuration = (long)p.BestEncounter.Duration,
-            ItemLevel = p.BestEncounter.MaxGearScore,
-            EncounterId = p.BestEncounter.EncounterId,
-            Role = p.BestEncounter.Role,
-            MaxHps = p.BestEncounter.Role == "2" && p.BestEncounter.Duration > 0
-                ? (double)p.BestEncounter.HealingDone / p.BestEncounter.Duration
+            EncounterDate = pe.StartTime,
+            EncounterDuration = (long)pe.Duration,
+            ItemLevel = pe.MaxGearScore,
+            EncounterId = pe.EncounterId,
+            Role = pe.Role,
+            MaxHps = pe.Role == "2" && pe.Duration > 0
+                ? (double)(pe.HealingDone + pe.AbsorbProvided) / pe.Duration
                 : null
         }).ToList();
-
-        players = players.OrderByDescending(p => p.Role == "2" && p.MaxHps.HasValue ? p.MaxHps.Value : p.MaxDps).ToList();
-        
-        for (var i = 0; i < players.Count; i++)
-        {
-            players[i].Rank = (page - 1) * pageSize + i + 1;
-        }
 
         return Ok(new PagedResult<PlayerDto>
         {

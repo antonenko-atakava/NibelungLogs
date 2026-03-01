@@ -159,9 +159,17 @@ public sealed class RaidDataService : IRaidDataService
 
                 if (savedEncounter == null)
                 {
-                    var encounterName = NaxxramasEncounter.Names.TryGetValue(encounter.EncounterEntry, out var name) 
-                        ? name 
-                        : null;
+                    var raidRecord = raids.FirstOrDefault(r => r.Id == encounter.LogInstanceId);
+                    var map = raidRecord?.Map ?? "533";
+                    
+                    var encounterName = map switch
+                    {
+                        "533" => NaxxramasEncounter.Names.TryGetValue(encounter.EncounterEntry, out var naxxName) ? naxxName : null,
+                        "616" => EyeOfEternityEncounter.Names.TryGetValue(encounter.EncounterEntry, out var eyeName) ? eyeName : null,
+                        "615" => ObsidianSanctumEncounter.Names.TryGetValue(encounter.EncounterEntry, out var obsName) ? obsName : null,
+                        "603" => UlduarEncounter.Names.TryGetValue(encounter.EncounterEntry, out var ulduarName) ? ulduarName : null,
+                        _ => null
+                    };
                     
                     savedEncounter = new Encounter
                     {

@@ -17,6 +17,22 @@ export const encounterImageMap: Record<string, string> = {
   "Таддиус": "/raids/naxxramas/тадиус.png",
   "Тан Кортазз": "/raids/naxxramas/всадники.png",
   "Хейган Нечестивый": "/raids/naxxramas/хейган.png",
+  "Малигос": "/raids/eye-of-eternity/малигос.png",
+  "Сартарион": "/raids/obsidian-sanctum/сартарион.png",
+  "Огненный Левиафан": "/raids/ulduar/огненный левиафан.png",
+  "Повелитель Горнов Игнис": "/raids/ulduar/игнис.png",
+  "Острокрылая": "/raids/ulduar/острокрылая.png",
+  "Разрушитель XT-002": "/raids/ulduar/разрушитель.png",
+  "Железное собрание": "/raids/ulduar/собрание.png",
+  "Кологарн": "/raids/ulduar/кологарн.png",
+  "Ауриайя": "/raids/ulduar/ауриайя.png",
+  "Мимирон": "/raids/ulduar/мимирон.png",
+  "Фрейя": "/raids/ulduar/фрейя.png",
+  "Торим": "/raids/ulduar/торим.png",
+  "Ходир": "/raids/ulduar/ходир.png",
+  "Генерал Везакс": "/raids/ulduar/везакс.png",
+  "Йогг-Сарон": "/raids/ulduar/йогг-сарон.png",
+  "Алгалон Наблюдатель": "/raids/ulduar/алгалон.png",
 };
 
 export function getEncounterImage(encounterName: string | null): string | null {

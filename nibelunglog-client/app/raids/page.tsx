@@ -1,146 +1,183 @@
 import { api } from '@/lib/api';
-import PrimaryButton from '@/components/ui/buttons/PrimaryButton';
-import SecondaryButton from '@/components/ui/buttons/SecondaryButton';
 import Link from 'next/link';
+import RaidsFilters from './RaidsFilters';
+import RaidsTable from './RaidsTable';
 
 interface RaidsPageProps {
-  searchParams: Promise<{ page?: string; raidTypeName?: string }>;
+    searchParams: Promise<{
+        page?: string;
+        raidTypeId?: string;
+        raidTypeName?: string;
+        guild?: string;
+        leader?: string;
+    }>;
 }
 
 export default async function RaidsPage({ searchParams }: RaidsPageProps) {
-  const params = await searchParams;
-  const page = parseInt(params.page || '1', 10);
-  const raidTypeName = params.raidTypeName;
+    const params = await searchParams;
 
-  let raidsData;
-  try {
-    raidsData = await api.getRaids({
-      page,
-      pageSize: 25,
-      raidTypeName,
-    });
-  } catch (error) {
+    const page = Math.max(parseInt(params.page ?? '1', 10) || 1, 1);
+    const raidTypeId = params.raidTypeId ? parseInt(params.raidTypeId, 10) : undefined;
+    const raidTypeName = params.raidTypeName;
+    const guild = params.guild;
+    const leader = params.leader;
+
+    // --- справочники (client-side фильтр)
+    let raidTypes: Array<{ id: number; name: string; map: string; difficulty: string; instanceType: string }> = [];
+    try {
+        raidTypes = await api.getRaidTypes();
+    } catch {
+        raidTypes = [];
+    }
+
+    // --- данные рейдов
+    let raidsData;
+    try {
+        raidsData = await api.getRaids({
+            page,
+            pageSize: 25,
+            raidTypeId,
+            raidTypeName,
+            guildName: guild,
+            leaderName: leader,
+        });
+    } catch {
+        return (
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[var(--foreground)] mb-4">Рейды</h1>
+                <div className="rounded-xl border border-[var(--error)]/40 bg-[var(--error)]/10 p-6" role="alert">
+                    <p className="text-[var(--error)] font-semibold">Ошибка подключения к API</p>
+                    <p className="mt-2 text-sm text-[var(--error)]/80">
+                        Проверь, что API запущен и NEXT_PUBLIC_API_URL указывает на него.
+                    </p>
+                </div>
+            </main>
+        );
+    }
+
+    // --- helpers
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const formatDate = (dateString: string) =>
+        new Date(dateString).toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+
+    const formatNumber = (value: number) => {
+        if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+        if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+        if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+        return value.toLocaleString('ru-RU');
+    };
+
+    const buildPageHref = (nextPage: number) => {
+        const sp = new URLSearchParams();
+
+        sp.set('page', String(nextPage));
+        if (raidTypeId !== undefined) sp.set('raidTypeId', String(raidTypeId));
+        if (raidTypeName) sp.set('raidTypeName', raidTypeName);
+        if (guild) sp.set('guild', guild);
+        if (leader) sp.set('leader', leader);
+
+        return `/raids?${sp.toString()}`;
+    };
+
     return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="mb-12">
-          <h1 className="text-5xl font-bold text-white mb-4">Рейды</h1>
-        </div>
-        <div className="text-center py-20">
-          <p className="text-red-400 text-lg mb-4">Ошибка подключения к API</p>
-          <p className="text-gray-400 text-sm">Убедитесь, что API сервер запущен на http://localhost:5097</p>
-        </div>
-      </main>
-    );
-  }
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+            <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[var(--foreground)] mb-2">
+                        Рейды
+                    </h1>
+                    <p className="text-sm sm:text-base text-[var(--foreground-muted)]">
+                        История рейдов и прогресс по боссам. Клик по строке — детали.
+                    </p>
+                </div>
 
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="mb-12">
-        <h1 className="text-5xl font-bold text-white mb-4">Рейды</h1>
-        {raidTypeName && (
-          <p className="text-gray-400 text-lg">Фильтр: {raidTypeName}</p>
-        )}
-      </div>
-
-      {raidsData.data.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-gray-400 text-lg">Рейды не найдены</p>
-        </div>
-      ) : (
-        <>
-          <div className="bg-gray-900 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden mb-12">
-            <table className="min-w-full divide-y divide-gray-800">
-              <thead className="bg-gray-950">
-                <tr>
-                  <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Рейд
-                  </th>
-                  <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Дата и время
-                  </th>
-                  <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Время
-                  </th>
-                  <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Лидер
-                  </th>
-                  <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Боссы
-                  </th>
-                  <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Вайпы
-                  </th>
-                  <th className="px-8 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Урон
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-gray-900 divide-y divide-gray-800">
-                {raidsData.data.map((raid) => (
-                  <tr key={raid.id} className="hover:bg-gray-800 transition-colors">
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <Link href={`/raids/${raid.id}`} className="text-base font-bold text-white hover:text-gray-300">
-                        {raid.raidTypeName}
-                      </Link>
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-400">
-                      {formatDate(raid.startTime)}
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-400">
-                      {formatTime(raid.totalTime)}
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-300">
-                      {raid.leaderName}
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-300">
-                      {raid.completedBosses} / {raid.totalBosses}
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-300">
-                      {raid.wipes}
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-white">
-                      {(raid.totalDamage / 1000000).toFixed(1)}M
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex justify-center items-center gap-6">
-            {page > 1 && (
-              <SecondaryButton href={`/raids?page=${page - 1}${raidTypeName ? `&raidTypeName=${encodeURIComponent(raidTypeName)}` : ''}`}>
-                Назад
-              </SecondaryButton>
-            )}
-            <span className="text-gray-400 text-lg font-medium">
-              Страница {page} из {raidsData.totalPages}
+                <div className="flex items-center gap-3 text-sm text-[var(--foreground-muted)]">
+                    <div className="rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] px-4 py-2">
+                        <span className="text-[var(--foreground-subtle)]">Записей:</span>{' '}
+                        <span className="text-[var(--foreground)] font-medium">
+              {raidsData.data.length}
             </span>
-            {page < raidsData.totalPages && (
-              <PrimaryButton href={`/raids?page=${page + 1}${raidTypeName ? `&raidTypeName=${encodeURIComponent(raidTypeName)}` : ''}`}>
-                Вперед
-              </PrimaryButton>
-            )}
-          </div>
-        </>
-      )}
-    </main>
-  );
-}
+                    </div>
+                    <div className="rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] px-4 py-2">
+                        <span className="text-[var(--foreground-subtle)]">Страница:</span>{' '}
+                        <span className="text-[var(--foreground)] font-medium">
+              {raidsData.page} / {raidsData.totalPages}
+            </span>
+                    </div>
+                </div>
+            </header>
 
+            <div className="mb-8">
+                <RaidsFilters raidTypes={raidTypes} />
+            </div>
+
+            {raidsData.data.length === 0 ? (
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--card-bg)] p-10 text-center" role="status" aria-live="polite">
+                    <p className="text-[var(--foreground)] text-lg font-medium">Рейды не найдены</p>
+                    <p className="mt-2 text-sm text-[var(--foreground-muted)]">
+                        Попробуй изменить фильтры или страницу.
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <RaidsTable raids={raidsData.data} />
+
+                    <footer className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-sm text-[var(--foreground-muted)]">
+                            Показано{' '}
+                            <span className="text-[var(--foreground)] font-medium">
+                {raidsData.data.length}
+              </span>{' '}
+                            рейдов
+                        </div>
+
+                        <nav className="flex items-center justify-center gap-4" aria-label="Пагинация">
+                            {page > 1 ? (
+                                <Link
+                                    href={buildPageHref(page - 1)}
+                                    className="px-4 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] text-sm text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+                                    aria-label="Предыдущая страница"
+                                >
+                                    Назад
+                                </Link>
+                            ) : (
+                                <span className="px-4 py-2 text-sm text-[var(--foreground-subtle)]" aria-disabled="true">Назад</span>
+                            )}
+
+                            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] px-4 py-2 text-sm text-[var(--foreground-muted)]">
+                                Страница{' '}
+                                <span className="font-semibold text-[var(--foreground)]">{page}</span> из{' '}
+                                <span className="font-semibold text-[var(--foreground)]">
+                  {raidsData.totalPages}
+                </span>
+                            </div>
+
+                            {page < raidsData.totalPages ? (
+                                <Link
+                                    href={buildPageHref(page + 1)}
+                                    className="px-4 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] text-sm text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+                                    aria-label="Следующая страница"
+                                >
+                                    Вперёд
+                                </Link>
+                            ) : (
+                                <span className="px-4 py-2 text-sm text-[var(--foreground-subtle)]" aria-disabled="true">Вперёд</span>
+                            )}
+                        </nav>
+                    </footer>
+                </>
+            )}
+        </main>
+    );
+}

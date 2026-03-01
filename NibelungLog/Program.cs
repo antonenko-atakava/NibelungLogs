@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,11 +13,10 @@ var serviceCollection = new ServiceCollection();
 serviceCollection.AddLogging(builder => builder.AddConsole());
 
 var postgresConnectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") 
-    ?? "Host=localhost;Port=5432;Database=nibelunglog;Username=postgres;Password=4444";
+    ?? "Host=localhost;Port=5432;Database=nibelunglog;Username=postgres;Password=password";
 
 serviceCollection.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
-
 serviceCollection.AddScoped<IRaidDataService, RaidDataService>();
 
 var httpClientHandler = new HttpClientHandler
@@ -42,7 +41,7 @@ var serviceProvider = serviceCollection.BuildServiceProvider();
 
 var authService = serviceProvider.GetRequiredService<IWowCircleAuthService>();
 
-var result = await authService.LoginAsync("Mimichelik", "gepoze96", 5);
+var result = await authService.LoginAsync("godlix", "1010334v", 5);
 
 Console.WriteLine($"Login successful: {result.IsAuth}");
 Console.WriteLine($"Account ID: {result.Id}");
@@ -53,10 +52,10 @@ using var scope = serviceProvider.CreateScope();
 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 await dbContext.Database.EnsureCreatedAsync();
 
-var naxxRaids = await authService.GetNaxxramasRaidsAsync(5, 1);
+var ulduarRaids = await authService.GetUlduarRaidsAsync(5, 1);
 
-Console.WriteLine($"Total Naxxramas raids found: {naxxRaids.Count}");
-Console.WriteLine("Processing raids...\n");
+Console.WriteLine($"Total Ulduar raids found: {ulduarRaids.Count}");
+Console.WriteLine("Processing Ulduar raids...\n");
 
 var dataService = scope.ServiceProvider.GetRequiredService<IRaidDataService>();
 
@@ -64,12 +63,12 @@ var totalEncounters = 0;
 var totalPlayerEncounters = 0;
 var raidIndex = 0;
 
-foreach (var raid in naxxRaids)
+foreach (var raid in ulduarRaids)
 {
     raidIndex++;
     
     if (raidIndex % 10 == 0)
-        Console.WriteLine($"Processed and saved {raidIndex}/{naxxRaids.Count} raids...");
+        Console.WriteLine($"Processed and saved {raidIndex}/{ulduarRaids.Count} raids...");
     
     var encounters = await authService.GetRaidDetailsAsync(5, raid.Id);
     var successfulEncounters = encounters.Where(e => e.Success == "1").ToList();
@@ -94,5 +93,4 @@ foreach (var raid in naxxRaids)
     totalPlayerEncounters += raidPlayerEncounters.Count;
 }
 
-Console.WriteLine($"\nSaved {raidIndex} raids, {totalEncounters} encounters, {totalPlayerEncounters} player encounters to database.");
-
+Console.WriteLine($"\nSaved {raidIndex} Ulduar raids, {totalEncounters} encounters, {totalPlayerEncounters} player encounters to database.");

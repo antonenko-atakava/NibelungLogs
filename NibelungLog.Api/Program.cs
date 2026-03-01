@@ -9,7 +9,7 @@ builder.Services.AddSwaggerGen();
 
 var postgresConnectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") 
     ?? builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=localhost;Port=5432;Database=nibelunglog;Username=postgres;Password=4444";
+    ?? "Host=localhost;Port=5432;Database=nibelunglog;Username=postgres;Password=password";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));

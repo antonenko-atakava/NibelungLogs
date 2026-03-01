@@ -2,17 +2,33 @@ import Link from 'next/link';
 
 export default function Navigation() {
   return (
-    <nav className="bg-[#1a1a1a] border-b border-[#333333] text-[#e5e5e5] sticky top-0 z-50">
+    <nav 
+      className="sticky top-0 z-50 bg-[var(--background-elevated)] border-b border-[var(--border-color)] backdrop-blur-md bg-opacity-80"
+      role="navigation"
+      aria-label="Основная навигация"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="text-xl font-bold tracking-tight text-[#e5e5e5] hover:text-white transition-colors">
+          <Link 
+            href="/" 
+            className="text-xl font-bold tracking-tight text-[var(--foreground)] hover:text-[var(--primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--background-elevated)] rounded-md px-2 py-1"
+            aria-label="Главная страница"
+          >
             Nibelung Log
           </Link>
-          <div className="flex gap-6">
-            <Link href="/raids" className="text-sm font-medium text-[#9ca3af] hover:text-[#e5e5e5] transition-colors">
+          <div className="flex gap-8" role="menubar">
+            <Link 
+              href="/raids" 
+              className="text-sm font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--background-elevated)] rounded-md px-3 py-2"
+              role="menuitem"
+            >
               Рейды
             </Link>
-            <Link href="/players" className="text-sm font-medium text-[#e5e5e5] hover:text-white transition-colors">
+            <Link 
+              href="/players" 
+              className="text-sm font-medium text-[var(--foreground)] hover:text-[var(--primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--background-elevated)] rounded-md px-3 py-2"
+              role="menuitem"
+            >
               Игроки
             </Link>
           </div>
