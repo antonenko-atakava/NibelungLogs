@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NibelungLog.Data;
 using NibelungLog.DiscordBot.Interfaces;
 using NibelungLog.DiscordBot.Models;
+using NibelungLog.DiscordBot.Utils;
 
 namespace NibelungLog.DiscordBot.Services;
 
@@ -187,5 +188,163 @@ public sealed class RaidService : IRaidService
         }
 
         return result;
+    }
+
+    public async Task<GuildRaidStatsModel> GetGuildRaidStatsAsync(string guildName, CancellationToken cancellationToken = default)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        using var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var raids = await context.Raids
+            .Include(r => r.RaidType)
+            .Where(r => r.GuildName == guildName)
+            .OrderByDescending(r => r.StartTime)
+            .ToListAsync(cancellationToken);
+
+        var raidStats = raids.Select(raid => new RaidStatsItem
+        {
+            Id = raid.Id,
+            RaidName = raid.RaidType.Name,
+            LeaderName = raid.LeaderName,
+            StartTime = raid.StartTime,
+            CompletedBosses = raid.CompletedBosses,
+            TotalBosses = raid.TotalBosses,
+            Wipes = raid.Wipes,
+            TotalDamage = raid.TotalDamage,
+            TotalHealing = raid.TotalHealing,
+            TotalTime = raid.TotalTime
+        }).ToList();
+
+        return new GuildRaidStatsModel
+        {
+            GuildName = guildName,
+            Raids = raidStats
+        };
+    }
+
+    public async Task<RaidDetailsModel?> GetRaidDetailsAsync(int raidId, CancellationToken cancellationToken = default)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        using var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var raid = await context.Raids
+            .Include(r => r.RaidType)
+            .Include(r => r.Encounters)
+                .ThenInclude(e => e.PlayerEncounters)
+            .FirstOrDefaultAsync(r => r.Id == raidId, cancellationToken);
+
+        if (raid == null)
+            return null;
+
+        var encounters = raid.Encounters
+            .OrderBy(e => e.StartTime)
+            .GroupBy(e => e.EncounterEntry)
+            .Select(g =>
+            {
+                var successfulEncounters = g.Where(e => e.Success).ToList();
+                var failedEncounters = g.Where(e => !e.Success).ToList();
+                var allEncounters = g.ToList();
+                var averageDps = allEncounters
+                    .Where(e => e.PlayerEncounters.Any())
+                    .SelectMany(e => e.PlayerEncounters)
+                    .Select(pe => pe.Dps)
+                    .DefaultIfEmpty(0)
+                    .Average();
+
+                var encounterName = allEncounters.First().EncounterName ?? g.Key;
+                encounterName = BossIconMapper.GetDisplayName(encounterName);
+
+                return new EncounterDetailsModel
+                {
+                    Id = allEncounters.First().Id,
+                    EncounterEntry = g.Key,
+                    EncounterName = encounterName,
+                    StartTime = allEncounters.First().StartTime,
+                    EndTime = successfulEncounters.Any() 
+                        ? successfulEncounters.OrderByDescending(e => e.EndTime).First().EndTime 
+                        : allEncounters.OrderByDescending(e => e.EndTime).First().EndTime,
+                    Success = successfulEncounters.Any(),
+                    TotalDamage = allEncounters.Sum(e => e.TotalDamage),
+                    TotalHealing = allEncounters.Sum(e => e.TotalHealing),
+                    AverageDps = averageDps,
+                    Attempts = allEncounters.Count,
+                    Wipes = failedEncounters.Count,
+                    Tanks = allEncounters.First().Tanks,
+                    Healers = allEncounters.First().Healers,
+                    DamageDealers = allEncounters.First().DamageDealers
+                };
+            })
+            .ToList();
+
+        return new RaidDetailsModel
+        {
+            RaidId = raid.Id,
+            RaidName = raid.RaidType.Name,
+            GuildName = raid.GuildName,
+            LeaderName = raid.LeaderName,
+            StartTime = raid.StartTime,
+            TotalTime = raid.TotalTime,
+            Wipes = raid.Wipes,
+            Encounters = encounters
+        };
+    }
+
+    public async Task<BossEncounterDetailsModel?> GetEncounterDetailsAsync(int raidId, string bossName, CancellationToken cancellationToken = default)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        using var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var raid = await context.Raids
+            .Include(r => r.RaidType)
+            .Include(r => r.Encounters)
+                .ThenInclude(e => e.PlayerEncounters)
+                    .ThenInclude(pe => pe.Player)
+            .Include(r => r.Encounters)
+                .ThenInclude(e => e.PlayerEncounters)
+                    .ThenInclude(pe => pe.CharacterSpec)
+            .FirstOrDefaultAsync(r => r.Id == raidId, cancellationToken);
+
+        if (raid == null)
+            return null;
+
+        var displayBossName = BossIconMapper.GetDisplayName(bossName);
+        var encounter = raid.Encounters
+            .Where(e => (e.EncounterName != null && (e.EncounterName.Contains(bossName, StringComparison.OrdinalIgnoreCase) ||
+                                                      BossIconMapper.GetDisplayName(e.EncounterName) == displayBossName)) ||
+                        e.EncounterEntry.Contains(bossName, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(e => e.StartTime)
+            .FirstOrDefault();
+
+        if (encounter == null)
+            return null;
+
+        var encounterDuration = (encounter.EndTime - encounter.StartTime).TotalSeconds;
+        var players = encounter.PlayerEncounters
+            .Select(pe => new PlayerEncounterDetailsModel
+            {
+                PlayerName = pe.Player.CharacterName,
+                ClassName = pe.Player.ClassName ?? "Неизвестно",
+                SpecName = pe.CharacterSpec.Name ?? pe.CharacterSpec.Spec,
+                Role = pe.Role,
+                Dps = pe.Dps,
+                Hps = encounterDuration > 0 ? pe.HealingDone / encounterDuration : 0,
+                DamageDone = pe.DamageDone,
+                HealingDone = pe.HealingDone
+            })
+            .OrderByDescending(p => p.Dps)
+            .ToList();
+
+        return new BossEncounterDetailsModel
+        {
+            RaidId = raid.Id,
+            RaidName = raid.RaidType.Name,
+            GuildName = raid.GuildName,
+            BossName = displayBossName,
+            StartTime = encounter.StartTime,
+            EndTime = encounter.EndTime,
+            Success = encounter.Success,
+            TotalTime = (long)encounterDuration,
+            Players = players
+        };
     }
 }
