@@ -124,23 +124,32 @@ var guildParserService = serviceProvider.GetRequiredService<IGuildParserService>
 var guildDataService = serviceProvider.GetRequiredService<IGuildDataService>();
 
 var guildName = Environment.GetEnvironmentVariable("GUILD_NAME");
+var guildId = Environment.GetEnvironmentVariable("GUILD_ID");
 var serverIdStr = Environment.GetEnvironmentVariable("WOWCIRCLE_SERVER_ID");
 var accountName = Environment.GetEnvironmentVariable("WOWCIRCLE_LOGIN");
 var accountPassword = Environment.GetEnvironmentVariable("WOWCIRCLE_PASSWORD");
 
-if (string.IsNullOrEmpty(guildName))
+if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(accountPassword))
 {
-    guildName = "Сироты из Наксрамаса";
+    logger.LogError("❌ Не указаны учетные данные: WOWCIRCLE_LOGIN и WOWCIRCLE_PASSWORD");
+    return;
 }
 
 if (string.IsNullOrEmpty(serverIdStr) || !int.TryParse(serverIdStr, out var serverId))
 {
-    serverId = 5;
+    logger.LogError("❌ Не указан или некорректный WOWCIRCLE_SERVER_ID");
+    return;
 }
 
-if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(accountPassword))
+if (string.IsNullOrEmpty(guildName))
 {
-    logger.LogError("❌ Не указаны учетные данные: WOWCIRCLE_LOGIN и WOWCIRCLE_PASSWORD");
+    logger.LogError("❌ Не указан GUILD_NAME");
+    return;
+}
+
+if (string.IsNullOrEmpty(guildId))
+{
+    logger.LogError("❌ Не указан GUILD_ID");
     return;
 }
 
@@ -164,12 +173,6 @@ logger.LogInformation("✅ Авторизация успешна: {AccountName} 
 using var scope = serviceProvider.CreateScope();
 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 await dbContext.Database.EnsureCreatedAsync();
-
-var guildId = Environment.GetEnvironmentVariable("GUILD_ID");
-if (string.IsNullOrEmpty(guildId))
-{
-    guildId = "23";
-}
 
 logger.LogInformation("───────────────────────────────────────────────────────────");
 logger.LogInformation("Загрузка участников гильдии...");

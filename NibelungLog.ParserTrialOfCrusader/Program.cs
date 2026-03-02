@@ -141,20 +141,20 @@ if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(accountPassword))
 
 if (string.IsNullOrEmpty(serverIdStr) || !int.TryParse(serverIdStr, out var serverId))
 {
-    serverId = 5;
-    logger.LogWarning("⚠️  WOWCIRCLE_SERVER_ID не указан, используется значение по умолчанию: {ServerId}", serverId);
+    logger.LogError("❌ Не указан или некорректный WOWCIRCLE_SERVER_ID");
+    return;
 }
 
 if (string.IsNullOrEmpty(mapId))
 {
-    mapId = "649";
-    logger.LogWarning("⚠️  RAID_MAP_ID не указан, используется значение по умолчанию: {MapId}", mapId);
+    logger.LogError("❌ Не указан RAID_MAP_ID");
+    return;
 }
 
 if (string.IsNullOrEmpty(difficultyStr) || !int.TryParse(difficultyStr, out var difficulty))
 {
-    difficulty = 1;
-    logger.LogWarning("⚠️  RAID_DIFFICULTY не указан, используется значение по умолчанию: {Difficulty}", difficulty);
+    logger.LogError("❌ Не указан или некорректный RAID_DIFFICULTY");
+    return;
 }
 
 var authService = serviceProvider.GetRequiredService<IWowCircleAuthService>();
