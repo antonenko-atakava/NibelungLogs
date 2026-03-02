@@ -1,4 +1,5 @@
 using System.Net;
+using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,46 @@ using NibelungLog.Domain.Interfaces.Repositories;
 using NibelungLog.Service.Services;
 using NibelungLog.Service.Infrastructure;
 using NibelungLog.Domain.Types.Dto;
+
+var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+var currentDirectory = Directory.GetCurrentDirectory();
+var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+var assemblyDirectory = Path.GetDirectoryName(assemblyLocation) ?? baseDirectory;
+
+var projectRoot = Directory.GetParent(baseDirectory)?.Parent?.Parent?.FullName;
+if (string.IsNullOrEmpty(projectRoot))
+{
+    var dir = new DirectoryInfo(baseDirectory);
+    while (dir != null && !File.Exists(Path.Combine(dir.FullName, ".env")) && dir.Name != "NibelungLogs")
+    {
+        dir = dir.Parent;
+    }
+    if (dir != null)
+        projectRoot = dir.FullName;
+}
+
+var envPaths = new[]
+{
+    Path.Combine(baseDirectory, ".env"),
+    Path.Combine(currentDirectory, ".env"),
+    Path.Combine(assemblyDirectory, ".env"),
+    projectRoot != null ? Path.Combine(projectRoot, ".env") : null
+}.Where(p => p != null).Cast<string>().ToArray();
+
+string? envPath = null;
+foreach (var path in envPaths)
+{
+    if (File.Exists(path))
+    {
+        envPath = path;
+        break;
+    }
+}
+
+if (envPath != null)
+{
+    Env.Load(envPath);
+}
 
 var serviceCollection = new ServiceCollection();
 
@@ -75,15 +116,33 @@ serviceCollection.AddScoped<IGuildDataService, NibelungLog.Service.Services.Guil
 
 var serviceProvider = serviceCollection.BuildServiceProvider();
 
+var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+var logger = loggerFactory.CreateLogger<Program>();
+
 var authService = serviceProvider.GetRequiredService<IWowCircleAuthService>();
 var guildParserService = serviceProvider.GetRequiredService<IGuildParserService>();
 var guildDataService = serviceProvider.GetRequiredService<IGuildDataService>();
 
-const string guildName = "Сироты из Наксрамаса";
-const int serverId = 5;
+var guildName = Environment.GetEnvironmentVariable("GUILD_NAME");
+var serverIdStr = Environment.GetEnvironmentVariable("WOWCIRCLE_SERVER_ID");
+var accountName = Environment.GetEnvironmentVariable("WOWCIRCLE_LOGIN");
+var accountPassword = Environment.GetEnvironmentVariable("WOWCIRCLE_PASSWORD");
 
-var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-var logger = loggerFactory.CreateLogger<Program>();
+if (string.IsNullOrEmpty(guildName))
+{
+    guildName = "Сироты из Наксрамаса";
+}
+
+if (string.IsNullOrEmpty(serverIdStr) || !int.TryParse(serverIdStr, out var serverId))
+{
+    serverId = 5;
+}
+
+if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(accountPassword))
+{
+    logger.LogError("❌ Не указаны учетные данные: WOWCIRCLE_LOGIN и WOWCIRCLE_PASSWORD");
+    return;
+}
 
 logger.LogInformation("═══════════════════════════════════════════════════════════");
 logger.LogInformation("Запуск парсера гильдии");
@@ -92,7 +151,7 @@ logger.LogInformation("Гильдия: {GuildName} | Сервер: {ServerId}", 
 logger.LogInformation("Логи записываются в: {LogPath}", logPath);
 
 logger.LogInformation("Подключение к WowCircle...");
-var loginResult = await authService.LoginAsync("bigdane21", "castiel2332", serverId);
+var loginResult = await authService.LoginAsync(accountName, accountPassword, serverId);
 
 if (!loginResult.IsAuth)
 {
@@ -106,7 +165,11 @@ using var scope = serviceProvider.CreateScope();
 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 await dbContext.Database.EnsureCreatedAsync();
 
-const string guildId = "23";
+var guildId = Environment.GetEnvironmentVariable("GUILD_ID");
+if (string.IsNullOrEmpty(guildId))
+{
+    guildId = "23";
+}
 
 logger.LogInformation("───────────────────────────────────────────────────────────");
 logger.LogInformation("Загрузка участников гильдии...");

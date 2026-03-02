@@ -1,4 +1,5 @@
 using System.Net;
+using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,46 @@ using NibelungLog.Domain.Interfaces.Repositories;
 using NibelungLog.Service.Services;
 using NibelungLog.Service.Infrastructure;
 using NibelungLog.Domain.Types.Dto;
+
+var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+var currentDirectory = Directory.GetCurrentDirectory();
+var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+var assemblyDirectory = Path.GetDirectoryName(assemblyLocation) ?? baseDirectory;
+
+var projectRoot = Directory.GetParent(baseDirectory)?.Parent?.Parent?.FullName;
+if (string.IsNullOrEmpty(projectRoot))
+{
+    var dir = new DirectoryInfo(baseDirectory);
+    while (dir != null && !File.Exists(Path.Combine(dir.FullName, ".env")) && dir.Name != "NibelungLogs")
+    {
+        dir = dir.Parent;
+    }
+    if (dir != null)
+        projectRoot = dir.FullName;
+}
+
+var envPaths = new[]
+{
+    Path.Combine(baseDirectory, ".env"),
+    Path.Combine(currentDirectory, ".env"),
+    Path.Combine(assemblyDirectory, ".env"),
+    projectRoot != null ? Path.Combine(projectRoot, ".env") : null
+}.Where(p => p != null).Cast<string>().ToArray();
+
+string? envPath = null;
+foreach (var path in envPaths)
+{
+    if (File.Exists(path))
+    {
+        envPath = path;
+        break;
+    }
+}
+
+if (envPath != null)
+{
+    Env.Load(envPath);
+}
 
 var serviceCollection = new ServiceCollection();
 
@@ -159,7 +200,7 @@ foreach (var raid in ulduarRaids)
 {
     raidIndex++;
     
-    var encounters = await authService.GetRaidDetailsAsync(5, raid.Id);
+    var encounters = await authService.GetRaidDetailsAsync(serverId, raid.Id);
     var successfulEncounters = encounters.Where(e => e.Success == "1").ToList();
     
     var raidEncounters = new List<EncounterRecord>();
@@ -169,7 +210,7 @@ foreach (var raid in ulduarRaids)
     {
         raidEncounters.Add(encounter);
         
-        var players = await authService.GetEncounterPlayersAsync(5, raid.Id, encounter.EncounterEntry, encounter.StartTime);
+        var players = await authService.GetEncounterPlayersAsync(serverId, raid.Id, encounter.EncounterEntry, encounter.StartTime);
         
         await Task.Delay(300);
         

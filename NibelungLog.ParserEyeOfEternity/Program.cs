@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,46 @@ using NibelungLog.Domain.Interfaces.Repositories;
 using NibelungLog.Service.Services;
 using NibelungLog.Service.Infrastructure;
 using NibelungLog.Domain.Types.Dto;
+
+var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+var currentDirectory = Directory.GetCurrentDirectory();
+var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+var assemblyDirectory = Path.GetDirectoryName(assemblyLocation) ?? baseDirectory;
+
+var projectRoot = Directory.GetParent(baseDirectory)?.Parent?.Parent?.FullName;
+if (string.IsNullOrEmpty(projectRoot))
+{
+    var dir = new DirectoryInfo(baseDirectory);
+    while (dir != null && !File.Exists(Path.Combine(dir.FullName, ".env")) && dir.Name != "NibelungLogs")
+    {
+        dir = dir.Parent;
+    }
+    if (dir != null)
+        projectRoot = dir.FullName;
+}
+
+var envPaths = new[]
+{
+    Path.Combine(baseDirectory, ".env"),
+    Path.Combine(currentDirectory, ".env"),
+    Path.Combine(assemblyDirectory, ".env"),
+    projectRoot != null ? Path.Combine(projectRoot, ".env") : null
+}.Where(p => p != null).Cast<string>().ToArray();
+
+string? envPath = null;
+foreach (var path in envPaths)
+{
+    if (File.Exists(path))
+    {
+        envPath = path;
+        break;
+    }
+}
+
+if (envPath != null)
+{
+    Env.Load(envPath);
+}
 
 var serviceCollection = new ServiceCollection();
 
@@ -86,10 +127,40 @@ logger.LogInformation("Запуск парсера рейдов Око вечн�
 logger.LogInformation("═══════════════════════════════════════════════════════════");
 logger.LogInformation("Логи записываются в: {LogPath}", logPath);
 
+var accountName = Environment.GetEnvironmentVariable("WOWCIRCLE_LOGIN");
+var accountPassword = Environment.GetEnvironmentVariable("WOWCIRCLE_PASSWORD");
+var serverIdStr = Environment.GetEnvironmentVariable("WOWCIRCLE_SERVER_ID");
+var mapId = Environment.GetEnvironmentVariable("RAID_MAP_ID");
+var difficultyStr = Environment.GetEnvironmentVariable("RAID_DIFFICULTY");
+
+if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(accountPassword))
+{
+    logger.LogError("❌ Не указаны учетные данные: WOWCIRCLE_LOGIN и WOWCIRCLE_PASSWORD");
+    return;
+}
+
+if (string.IsNullOrEmpty(serverIdStr) || !int.TryParse(serverIdStr, out var serverId))
+{
+    serverId = 5;
+    logger.LogWarning("⚠️  WOWCIRCLE_SERVER_ID не указан, используется значение по умолчанию: {ServerId}", serverId);
+}
+
+if (string.IsNullOrEmpty(mapId))
+{
+    mapId = "616";
+    logger.LogWarning("⚠️  RAID_MAP_ID не указан, используется значение по умолчанию: {MapId}", mapId);
+}
+
+if (string.IsNullOrEmpty(difficultyStr) || !int.TryParse(difficultyStr, out var difficulty))
+{
+    difficulty = 1;
+    logger.LogWarning("⚠️  RAID_DIFFICULTY не указан, используется значение по умолчанию: {Difficulty}", difficulty);
+}
+
 var authService = serviceProvider.GetRequiredService<IWowCircleAuthService>();
 
 logger.LogInformation("Подключение к WowCircle...");
-var result = await authService.LoginAsync("stihons", "x5433777", 5);
+var result = await authService.LoginAsync(accountName, accountPassword, serverId);
 
 if (!result.IsAuth)
 {
@@ -104,7 +175,7 @@ var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()
 await dbContext.Database.EnsureCreatedAsync();
 
 logger.LogInformation("Поиск рейдов Око вечности...");
-var raids = await authService.GetRaidsByMapAsync(5, "616", 1);
+var raids = await authService.GetRaidsByMapAsync(serverId, mapId, difficulty);
 
 logger.LogInformation("Найдено рейдов: {Count}", raids.Count);
 
@@ -129,7 +200,7 @@ foreach (var raid in raids)
 {
     raidIndex++;
     
-    var encounters = await authService.GetRaidDetailsAsync(5, raid.Id);
+    var encounters = await authService.GetRaidDetailsAsync(serverId, raid.Id);
     var successfulEncounters = encounters.Where(e => e.Success == "1").ToList();
     
     var raidEncounters = new List<EncounterRecord>();
@@ -139,7 +210,7 @@ foreach (var raid in raids)
     {
         raidEncounters.Add(encounter);
         
-        var players = await authService.GetEncounterPlayersAsync(5, raid.Id, encounter.EncounterEntry, encounter.StartTime);
+        var players = await authService.GetEncounterPlayersAsync(serverId, raid.Id, encounter.EncounterEntry, encounter.StartTime);
         
         await Task.Delay(300);
         
