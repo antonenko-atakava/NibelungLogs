@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,12 +60,12 @@ if (string.IsNullOrEmpty(logPath))
                   Environment.OSVersion.Platform == PlatformID.MacOSX;
     
     if (isLinux)
-        logPath = "/var/log/nibelunglog/parser-ulduar.log";
+        logPath = "/var/log/nibelunglog/parser-obsidian-sanctum.log";
     else
     {
         var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
         var logsDirectory = Path.Combine(appDirectory, "logs");
-        logPath = Path.Combine(logsDirectory, "parser-ulduar.log");
+        logPath = Path.Combine(logsDirectory, "parser-obsidian-sanctum.log");
     }
 }
 
@@ -123,7 +123,7 @@ var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 var logger = loggerFactory.CreateLogger<Program>();
 
 logger.LogInformation("═══════════════════════════════════════════════════════════");
-logger.LogInformation("Запуск парсера рейдов Ульдуар");
+logger.LogInformation("Запуск парсера рейдов Обсидиановое святилище");
 logger.LogInformation("═══════════════════════════════════════════════════════════");
 logger.LogInformation("Логи записываются в: {LogPath}", logPath);
 
@@ -174,12 +174,12 @@ using var scope = serviceProvider.CreateScope();
 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 await dbContext.Database.EnsureCreatedAsync();
 
-logger.LogInformation("Поиск рейдов Ульдуар...");
-var ulduarRaids = await authService.GetRaidsByMapAsync(serverId, mapId, difficulty);
+logger.LogInformation("Поиск рейдов Обсидиановое святилище...");
+var raids = await authService.GetRaidsByMapAsync(serverId, mapId, difficulty);
 
-logger.LogInformation("Найдено рейдов: {Count}", ulduarRaids.Count);
+logger.LogInformation("Найдено рейдов: {Count}", raids.Count);
 
-if (ulduarRaids.Count == 0)
+if (raids.Count == 0)
 {
     logger.LogWarning("⚠️  Рейды не найдены");
     return;
@@ -196,7 +196,7 @@ logger.LogInformation("───────────────────
 logger.LogInformation("Обработка рейдов...");
 logger.LogInformation("───────────────────────────────────────────────────────────");
 
-foreach (var raid in ulduarRaids)
+foreach (var raid in raids)
 {
     raidIndex++;
     
@@ -222,11 +222,11 @@ foreach (var raid in ulduarRaids)
     totalEncounters += raidEncounters.Count;
     totalPlayerEncounters += raidPlayerEncounters.Count;
     
-    if (raidIndex % 10 == 0 || raidIndex == ulduarRaids.Count)
+    if (raidIndex % 10 == 0 || raidIndex == raids.Count)
     {
-        var progress = (double)raidIndex / ulduarRaids.Count * 100;
+        var progress = (double)raidIndex / raids.Count * 100;
         logger.LogInformation("Прогресс: {Current}/{Total} ({Progress:F1}%) | Энкаунтеров: {Encounters} | Игроков: {Players}", 
-            raidIndex, ulduarRaids.Count, progress, totalEncounters, totalPlayerEncounters);
+            raidIndex, raids.Count, progress, totalEncounters, totalPlayerEncounters);
     }
 }
 
