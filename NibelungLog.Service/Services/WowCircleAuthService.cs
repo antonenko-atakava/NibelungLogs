@@ -397,6 +397,111 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
         return allRaids;
     }
 
+    public async Task<List<RaidRecord>> GetRaidsByMapAsync(int serverId, string mapId, int difficulty, CancellationToken cancellationToken = default)
+    {
+        var allRaids = new List<RaidRecord>();
+        var page = 1;
+        const int limit = 25;
+        var hasMoreData = true;
+
+        while (hasMoreData)
+        {
+            var requestData = new PveLadderRequestData
+            {
+                Page = page,
+                Start = (page - 1) * limit,
+                Limit = limit,
+                Sort =
+                [
+                    new SortOption { Property = "total_pve_points_guild", Direction = "DESC" },
+                    new SortOption { Property = "total_time", Direction = "ASC" }
+                ],
+                Filter =
+                [
+                    new FilterOption { Property = "map", Value = JsonSerializer.SerializeToElement<List<string>>([mapId]) },
+                    new FilterOption { Property = "realm", Value = JsonSerializer.SerializeToElement<int>(serverId) },
+                    new FilterOption { Property = "difficulty", Value = JsonSerializer.SerializeToElement<int>(difficulty) }
+                ]
+            };
+
+            var rpcRequest = new PveLadderRpcRequest
+            {
+                Type = "rpc",
+                Tid = 20 + page,
+                Action = "wow_Services",
+                Method = "cmdGetPveLadder",
+                Data = [requestData]
+            };
+
+            var requestUri = $"/main.php?1&serverId={serverId}";
+
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = JsonContent.Create(rpcRequest, options: _jsonOptions)
+            };
+
+            requestMessage.Headers.Add("Origin", "https://cp.wowcircle.net");
+            requestMessage.Headers.Add("Referer", "https://cp.wowcircle.net/pveladder");
+            requestMessage.Headers.Add("X-Requested-With", "XMLHttpRequest");
+
+            using var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Get raids by map {MapId} failed with status {StatusCode}: {Content}", mapId, response.StatusCode, errorContent);
+                response.EnsureSuccessStatusCode();
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            using var document = JsonDocument.Parse(responseContent);
+            var root = document.RootElement;
+
+            PveLadderRpcResponse? ladderResponse = null;
+
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var element in root.EnumerateArray())
+                {
+                    if (element.TryGetProperty("method", out var methodProperty))
+                    {
+                        var method = methodProperty.GetString();
+                        if (method == "cmdGetPveLadder")
+                        {
+                            ladderResponse = JsonSerializer.Deserialize<PveLadderRpcResponse>(element.GetRawText(), _jsonOptions);
+                            break;
+                        }
+                    }
+                }
+            }
+            else if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (root.TryGetProperty("method", out var methodProperty))
+                {
+                    var method = methodProperty.GetString();
+                    if (method == "cmdGetPveLadder")
+                        ladderResponse = JsonSerializer.Deserialize<PveLadderRpcResponse>(responseContent, _jsonOptions);
+                }
+            }
+
+            if (ladderResponse == null || ladderResponse.Result.Data.Count == 0)
+            {
+                hasMoreData = false;
+                break;
+            }
+
+            allRaids.AddRange(ladderResponse.Result.Data);
+
+            if (ladderResponse.Result.Data.Count < limit)
+                hasMoreData = false;
+            else
+                page++;
+        }
+
+        return allRaids;
+    }
+
     public async Task<List<EncounterRecord>> GetRaidDetailsAsync(int serverId, string raidId, CancellationToken cancellationToken = default)
     {
         var allEncounters = new List<EncounterRecord>();
