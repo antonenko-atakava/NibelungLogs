@@ -105,3 +105,24 @@ Documentation files (`.md` or similar formats) must be created ONLY when explici
 - Subdirectories for each component type: `сущности/`, `dto/`, `контроллеры/`, `сервисы/`, `репозитории/`, `валидаторы/`, `маппинги/`
 - Each component must have its own `.md` file with: description, location, structure (code examples), fields/parameters, usage examples, and related components
 - Documentation must be in Russian and follow the exact structure demonstrated in the authorization module documentation
+
+### 27. Project structure and layer organization
+The project must follow strict layer separation. Each layer has specific responsibilities and must not contain code from other layers:
+
+- **NibelungLog.Domain**: Contains entities, models, requests, responses, and interfaces. This is the core domain layer with business entities and contracts. All DTOs, entities, value objects, and domain interfaces belong here.
+
+- **NibelungLog.DAL**: Contains database access layer. Includes ApplicationDbContext, database configurations, migrations, repositories, and all data access logic. Entity Framework configurations and database-related code must be in this layer.
+
+- **NibelungLog.Service**: Contains business logic services. All service implementations that contain business logic, data processing, and orchestration belong here. Services depend on Domain interfaces and DAL repositories.
+
+- **NibelungLog.Api**: Contains API controllers and API-specific code. This is the presentation layer for HTTP API endpoints. Controllers depend on Service layer interfaces.
+
+- **NibelungLog.ParserUlduar**: Console application for parsing Ulduar raid data. Each raid parser must be a separate console application project following the naming pattern `NibelungLog.Parser{RaidName}`.
+
+- **NibelungLog.ParserNaxxramas**: Console application for parsing Naxxramas raid data. Follows the same pattern as other parser applications.
+
+- **NibelungLog.GuildWorker**: Console application for parsing guild data. Handles guild-related parsing operations.
+
+- **NibelungLog.DiscordBot**: Discord bot application. Contains Discord-specific code, commands, and handlers.
+
+Dependencies must flow in one direction: Api/Parsers/DiscordBot → Service → DAL → Domain. Lower layers must not depend on higher layers. Domain layer must not depend on any other layer.

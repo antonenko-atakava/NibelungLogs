@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using NibelungLog.Data;
+using NibelungLog.DAL.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 

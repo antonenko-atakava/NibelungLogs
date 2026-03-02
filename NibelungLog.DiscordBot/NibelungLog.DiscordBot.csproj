@@ -21,7 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NibelungLog\NibelungLog.csproj" />
+    <ProjectReference Include="..\NibelungLog.Domain\NibelungLog.Domain.csproj" />
+    <ProjectReference Include="..\NibelungLog.DAL\NibelungLog.DAL.csproj" />
   </ItemGroup>
 
   <ItemGroup>

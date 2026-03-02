@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NibelungLog.Api.Dto;
-using NibelungLog.Data;
+using NibelungLog.DAL.Data;
 
 namespace NibelungLog.Api.Controllers;
 

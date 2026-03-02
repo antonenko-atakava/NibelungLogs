@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NibelungLog\NibelungLog.csproj" />
+    <ProjectReference Include="..\NibelungLog.DAL\NibelungLog.DAL.csproj" />
   </ItemGroup>
 
 </Project>
