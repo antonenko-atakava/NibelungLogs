@@ -1,4 +1,4 @@
-namespace NibelungLog.Api.Dto;
+namespace NibelungLog.Domain.Types.Dto.Response;
 
 public sealed class PlayerEncounterDto
 {
@@ -16,4 +16,3 @@ public sealed class PlayerEncounterDto
     public required string MaxAverageGearScore { get; set; }
     public required string MaxGearScore { get; set; }
 }
-

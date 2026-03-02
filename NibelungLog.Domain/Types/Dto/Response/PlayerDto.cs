@@ -1,4 +1,4 @@
-namespace NibelungLog.Api.Dto;
+namespace NibelungLog.Domain.Types.Dto.Response;
 
 public sealed class PlayerDto
 {
@@ -23,4 +23,3 @@ public sealed class PlayerDto
     public string? Role { get; set; }
     public int? EncounterId { get; set; }
 }
-

@@ -1,4 +1,4 @@
-namespace NibelungLog.Api.Dto;
+namespace NibelungLog.Domain.Types.Dto.Response;
 
 public sealed class EncounterDto
 {
@@ -14,4 +14,3 @@ public sealed class EncounterDto
     public int Healers { get; set; }
     public int DamageDealers { get; set; }
 }
-

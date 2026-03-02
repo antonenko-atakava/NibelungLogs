@@ -1,4 +1,4 @@
-namespace NibelungLog.Api.Dto;
+namespace NibelungLog.Domain.Types.Dto.Response;
 
 public sealed class RaidTypeDto
 {
@@ -8,4 +8,3 @@ public sealed class RaidTypeDto
     public required string Difficulty { get; set; }
     public required string InstanceType { get; set; }
 }
-

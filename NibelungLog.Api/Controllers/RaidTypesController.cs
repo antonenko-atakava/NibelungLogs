@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using NibelungLog.Api.Dto;
-using NibelungLog.DAL.Data;
+using NibelungLog.Domain.Interfaces;
+using NibelungLog.Domain.Types.Dto.Response;
 
 namespace NibelungLog.Api.Controllers;
 
@@ -9,28 +8,17 @@ namespace NibelungLog.Api.Controllers;
 [Route("api/[controller]")]
 public sealed class RaidTypesController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IRaidTypeQueryService _raidTypeQueryService;
 
-    public RaidTypesController(ApplicationDbContext context)
+    public RaidTypesController(IRaidTypeQueryService raidTypeQueryService)
     {
-        _context = context;
+        _raidTypeQueryService = raidTypeQueryService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<RaidTypeDto>>> GetRaidTypes(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<List<RaidTypeDto>>> GetRaidTypes(CancellationToken cancellationToken = default)
     {
-        var raidTypes = await _context.RaidTypes
-            .OrderBy(rt => rt.Name)
-            .Select(rt => new RaidTypeDto
-            {
-                Id = rt.Id,
-                Name = rt.Name,
-                Map = rt.Map,
-                Difficulty = rt.Difficulty,
-                InstanceType = rt.InstanceType
-            })
-            .ToListAsync(cancellationToken);
-
+        var raidTypes = await _raidTypeQueryService.GetRaidTypesAsync(cancellationToken);
         return Ok(raidTypes);
     }
 }

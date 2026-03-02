@@ -1,6 +1,6 @@
-namespace NibelungLog.Api.Dto;
+namespace NibelungLog.Domain.Types.Dto.Response;
 
-public sealed class RaidDto
+public sealed class RaidDetailDto
 {
     public int Id { get; set; }
     public required string RaidId { get; set; }
@@ -14,5 +14,5 @@ public sealed class RaidDto
     public int Wipes { get; set; }
     public int CompletedBosses { get; set; }
     public int TotalBosses { get; set; }
+    public required List<EncounterDto> Encounters { get; set; }
 }
-

@@ -1,4 +1,4 @@
-namespace NibelungLog.Api.Dto;
+namespace NibelungLog.Domain.Types.Dto.Response;
 
 public sealed class PagedResult<T>
 {
@@ -8,4 +8,3 @@ public sealed class PagedResult<T>
     public int PageSize { get; set; }
     public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
 }
-
