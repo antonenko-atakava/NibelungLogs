@@ -54,26 +54,64 @@ public sealed class GuildProcessingService : IGuildProcessingService
 
     public async Task ProcessAllGuildsAsync(int serverId, CancellationToken cancellationToken = default)
     {
-        var guilds = await _guildRepository.GetAllAsync(cancellationToken);
+        _logger.LogInformation("═══════════════════════════════════════════════════════════");
+        _logger.LogInformation("Этап 1: Парсинг списка гильдий");
+        _logger.LogInformation("═══════════════════════════════════════════════════════════");
 
-        _logger.LogInformation("Найдено гильдий в базе: {Count}", guilds.Count);
+        var allGuilds = await _guildParserService.GetAllGuildsAsync(serverId, cancellationToken);
 
-        if (guilds.Count == 0)
+        _logger.LogInformation("Найдено гильдий: {Count}", allGuilds.Count);
+
+        if (allGuilds.Count == 0)
         {
-            _logger.LogWarning("⚠️  Гильдии не найдены в базе данных");
+            _logger.LogWarning("⚠️  Гильдии не найдены");
             return;
         }
 
-        var totalProcessed = 0;
+        var filteredGuilds = allGuilds
+            .Where(g => int.TryParse(g.MembersCount, out var count) && count > 10)
+            .ToList();
+
+        _logger.LogInformation("Гильдий с количеством участников > 10: {Count}", filteredGuilds.Count);
+
+        _logger.LogInformation("───────────────────────────────────────────────────────────");
+        _logger.LogInformation("Сохранение гильдий в базу данных...");
+        _logger.LogInformation("───────────────────────────────────────────────────────────");
+
+        var savedGuilds = 0;
+        foreach (var guildItem in filteredGuilds)
+        {
+            var guildInfo = new GuildInfoRecord
+            {
+                GuildId = guildItem.GuildId,
+                GuildName = guildItem.Name
+            };
+
+            await _guildDataService.SaveGuildAsync(guildInfo, cancellationToken);
+            savedGuilds++;
+
+            if (savedGuilds % 10 == 0)
+            {
+                _logger.LogInformation("Сохранено гильдий: {Current}/{Total}", savedGuilds, filteredGuilds.Count);
+            }
+        }
+
+        _logger.LogInformation("✅ Сохранено гильдий: {Count}", savedGuilds);
+
+        _logger.LogInformation("═══════════════════════════════════════════════════════════");
+        _logger.LogInformation("Этап 2: Парсинг участников гильдий");
+        _logger.LogInformation("═══════════════════════════════════════════════════════════");
+
         var totalMembers = 0;
         var guildIndex = 0;
         var startTime = DateTime.Now;
+        const int pageLimit = 25;
 
         _logger.LogInformation("───────────────────────────────────────────────────────────");
-        _logger.LogInformation("Обработка гильдий...");
+        _logger.LogInformation("Обработка участников гильдий...");
         _logger.LogInformation("───────────────────────────────────────────────────────────");
 
-        foreach (var guild in guilds)
+        foreach (var guildItem in filteredGuilds)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
@@ -82,42 +120,54 @@ public sealed class GuildProcessingService : IGuildProcessingService
 
             try
             {
-                _logger.LogInformation("Обработка гильдии {Index}/{Total}: {GuildName} ({GuildId})",
-                    guildIndex, guilds.Count, guild.GuildName, guild.GuildId);
+                _logger.LogInformation("Обработка гильдии {Index}/{Total}: {GuildName} ({GuildId}) | Участников: {Members}",
+                    guildIndex, filteredGuilds.Count, guildItem.Name, guildItem.GuildId, guildItem.MembersCount);
 
-                var members = await _guildParserService.GetGuildMembersAsync(guild.GuildId, serverId, cancellationToken);
+                var page = 1;
+                var hasMorePages = true;
+                var guildMembersCount = 0;
 
-                if (members.Count > 0)
+                while (hasMorePages)
                 {
-                    var guildInfo = new GuildInfoRecord
+                    var members = await _guildParserService.GetGuildMembersPageAsync(
+                        guildItem.GuildId, serverId, page, pageLimit, cancellationToken);
+
+                    if (members.Count == 0)
                     {
-                        GuildId = guild.GuildId,
-                        GuildName = guild.GuildName
-                    };
+                        hasMorePages = false;
+                        break;
+                    }
 
-                    await _guildDataService.SaveGuildDataAsync(guildInfo, members, cancellationToken);
+                    await _guildDataService.SaveGuildMembersPageAsync(guildItem.GuildId, members, cancellationToken);
+
+                    guildMembersCount += members.Count;
                     totalMembers += members.Count;
-                    totalProcessed++;
 
-                    _logger.LogInformation("✅ Обработано: {GuildName} | Участников: {Count}", guild.GuildName, members.Count);
-                }
-                else
-                {
-                    _logger.LogWarning("⚠️  Участники не найдены для гильдии {GuildName}", guild.GuildName);
+                    _logger.LogInformation("  Страница {Page}: сохранено {Count} участников | Всего для гильдии: {Total}",
+                        page, members.Count, guildMembersCount);
+
+                    if (members.Count < pageLimit)
+                        hasMorePages = false;
+                    else
+                        page++;
+
+                    await Task.Delay(300, cancellationToken);
                 }
 
-                if (guildIndex % 5 == 0 || guildIndex == guilds.Count)
+                _logger.LogInformation("✅ Обработано: {GuildName} | Участников: {Count}", guildItem.Name, guildMembersCount);
+
+                if (guildIndex % 5 == 0 || guildIndex == filteredGuilds.Count)
                 {
-                    var progress = (double)guildIndex / guilds.Count * 100;
-                    _logger.LogInformation("Прогресс: {Current}/{Total} ({Progress:F1}%) | Обработано: {Processed} | Участников: {Members}",
-                        guildIndex, guilds.Count, progress, totalProcessed, totalMembers);
+                    var progress = (double)guildIndex / filteredGuilds.Count * 100;
+                    _logger.LogInformation("Прогресс: {Current}/{Total} ({Progress:F1}%) | Участников: {Members}",
+                        guildIndex, filteredGuilds.Count, progress, totalMembers);
                 }
 
                 await Task.Delay(500, cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Ошибка при обработке гильдии {GuildName} ({GuildId})", guild.GuildName, guild.GuildId);
+                _logger.LogError(ex, "❌ Ошибка при обработке гильдии {GuildName} ({GuildId})", guildItem.Name, guildItem.GuildId);
             }
         }
 
@@ -127,7 +177,7 @@ public sealed class GuildProcessingService : IGuildProcessingService
         _logger.LogInformation("✅ Обработка всех гильдий завершена");
         _logger.LogInformation("───────────────────────────────────────────────────────────");
         _logger.LogInformation("Обработано:");
-        _logger.LogInformation("  • Гильдий: {Guilds}", totalProcessed);
+        _logger.LogInformation("  • Гильдий: {Guilds}", guildIndex);
         _logger.LogInformation("  • Всего участников: {Members}", totalMembers);
         _logger.LogInformation("Время выполнения: {Time}", elapsedTime.ToString(@"mm\:ss"));
         _logger.LogInformation("═══════════════════════════════════════════════════════════");
