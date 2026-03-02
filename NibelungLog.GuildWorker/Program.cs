@@ -9,7 +9,6 @@ using NibelungLog.Domain.Interfaces;
 using NibelungLog.Domain.Interfaces.Repositories;
 using NibelungLog.Service.Services;
 using NibelungLog.Service.Infrastructure;
-using NibelungLog.Domain.Types.Dto;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var currentDirectory = Directory.GetCurrentDirectory();
@@ -112,7 +111,8 @@ httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0
 serviceCollection.AddSingleton(httpClient);
 serviceCollection.AddTransient<IWowCircleAuthService, WowCircleAuthService>();
 serviceCollection.AddTransient<IGuildParserService, GuildParserService>();
-serviceCollection.AddScoped<IGuildDataService, NibelungLog.Service.Services.GuildDataService>();
+serviceCollection.AddScoped<IGuildDataService, GuildDataService>();
+serviceCollection.AddScoped<IGuildProcessingService, GuildProcessingService>();
 
 var serviceProvider = serviceCollection.BuildServiceProvider();
 
@@ -120,11 +120,7 @@ var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 var logger = loggerFactory.CreateLogger<Program>();
 
 var authService = serviceProvider.GetRequiredService<IWowCircleAuthService>();
-var guildParserService = serviceProvider.GetRequiredService<IGuildParserService>();
-var guildDataService = serviceProvider.GetRequiredService<IGuildDataService>();
 
-var guildName = Environment.GetEnvironmentVariable("GUILD_NAME");
-var guildId = Environment.GetEnvironmentVariable("GUILD_ID");
 var serverIdStr = Environment.GetEnvironmentVariable("WOWCIRCLE_SERVER_ID");
 var accountName = Environment.GetEnvironmentVariable("WOWCIRCLE_LOGIN");
 var accountPassword = Environment.GetEnvironmentVariable("WOWCIRCLE_PASSWORD");
@@ -141,22 +137,10 @@ if (string.IsNullOrEmpty(serverIdStr) || !int.TryParse(serverIdStr, out var serv
     return;
 }
 
-if (string.IsNullOrEmpty(guildName))
-{
-    logger.LogError("❌ Не указан GUILD_NAME");
-    return;
-}
-
-if (string.IsNullOrEmpty(guildId))
-{
-    logger.LogError("❌ Не указан GUILD_ID");
-    return;
-}
-
 logger.LogInformation("═══════════════════════════════════════════════════════════");
-logger.LogInformation("Запуск парсера гильдии");
+logger.LogInformation("Запуск парсера гильдий");
 logger.LogInformation("═══════════════════════════════════════════════════════════");
-logger.LogInformation("Гильдия: {GuildName} | Сервер: {ServerId}", guildName, serverId);
+logger.LogInformation("Сервер: {ServerId}", serverId);
 logger.LogInformation("Логи записываются в: {LogPath}", logPath);
 
 logger.LogInformation("Подключение к WowCircle...");
@@ -171,34 +155,7 @@ if (!loginResult.IsAuth)
 logger.LogInformation("✅ Авторизация успешна: {AccountName} (Сервер: {Realm})", loginResult.Name, loginResult.Realm);
 
 using var scope = serviceProvider.CreateScope();
-var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-await dbContext.Database.EnsureCreatedAsync();
+var guildProcessingService = scope.ServiceProvider.GetRequiredService<IGuildProcessingService>();
 
-logger.LogInformation("───────────────────────────────────────────────────────────");
-logger.LogInformation("Загрузка участников гильдии...");
-logger.LogInformation("───────────────────────────────────────────────────────────");
-
-var members = await guildParserService.GetGuildMembersAsync(guildId, serverId);
-
-var guildInfo = new GuildInfoRecord
-{
-    GuildId = guildId,
-    GuildName = guildName
-};
-
-logger.LogInformation("Найдено участников: {Count}", members.Count);
-
-if (members.Count == 0)
-{
-    logger.LogWarning("⚠️  Участники не найдены");
-    return;
-}
-
-logger.LogInformation("Сохранение данных в базу...");
-await guildDataService.SaveGuildDataAsync(guildInfo, members);
-
-logger.LogInformation("───────────────────────────────────────────────────────────");
-logger.LogInformation("✅ Данные гильдии успешно сохранены");
-logger.LogInformation("  • Участников: {Count}", members.Count);
-logger.LogInformation("═══════════════════════════════════════════════════════════");
+await guildProcessingService.ProcessAllGuildsAsync(serverId);
 

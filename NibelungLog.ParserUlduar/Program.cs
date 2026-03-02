@@ -9,7 +9,6 @@ using NibelungLog.Domain.Interfaces;
 using NibelungLog.Domain.Interfaces.Repositories;
 using NibelungLog.Service.Services;
 using NibelungLog.Service.Infrastructure;
-using NibelungLog.Domain.Types.Dto;
 
 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 var currentDirectory = Directory.GetCurrentDirectory();
@@ -98,6 +97,7 @@ serviceCollection.AddScoped<IEncounterRepository, EncounterRepository>();
 serviceCollection.AddScoped<IPlayerEncounterRepository, PlayerEncounterRepository>();
 
 serviceCollection.AddScoped<IRaidDataService, RaidDataService>();
+serviceCollection.AddScoped<IRaidParserService, RaidParserService>();
 
 var httpClientHandler = new HttpClientHandler
 {
@@ -171,73 +171,6 @@ if (!result.IsAuth)
 logger.LogInformation("✅ Авторизация успешна: {AccountName} (Сервер: {Realm})", result.Name, result.Realm);
 
 using var scope = serviceProvider.CreateScope();
-var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-await dbContext.Database.EnsureCreatedAsync();
+var raidParserService = scope.ServiceProvider.GetRequiredService<IRaidParserService>();
 
-logger.LogInformation("Поиск рейдов Ульдуар...");
-var ulduarRaids = await authService.GetRaidsByMapAsync(serverId, mapId, difficulty);
-
-logger.LogInformation("Найдено рейдов: {Count}", ulduarRaids.Count);
-
-if (ulduarRaids.Count == 0)
-{
-    logger.LogWarning("⚠️  Рейды не найдены");
-    return;
-}
-
-var dataService = scope.ServiceProvider.GetRequiredService<IRaidDataService>();
-
-var totalEncounters = 0;
-var totalPlayerEncounters = 0;
-var raidIndex = 0;
-var startTime = DateTime.Now;
-
-logger.LogInformation("───────────────────────────────────────────────────────────");
-logger.LogInformation("Обработка рейдов...");
-logger.LogInformation("───────────────────────────────────────────────────────────");
-
-foreach (var raid in ulduarRaids)
-{
-    raidIndex++;
-    
-    var encounters = await authService.GetRaidDetailsAsync(serverId, raid.Id);
-    var successfulEncounters = encounters.Where(e => e.Success == "1").ToList();
-    
-    var raidEncounters = new List<EncounterRecord>();
-    var raidPlayerEncounters = new List<PlayerEncounterRecord>();
-    
-    foreach (var encounter in successfulEncounters)
-    {
-        raidEncounters.Add(encounter);
-        
-        var players = await authService.GetEncounterPlayersAsync(serverId, raid.Id, encounter.EncounterEntry, encounter.StartTime);
-        
-        await Task.Delay(300);
-        
-        raidPlayerEncounters.AddRange(players);
-    }
-    
-    await dataService.SaveSingleRaidDataAsync(raid, raidEncounters, raidPlayerEncounters);
-    
-    totalEncounters += raidEncounters.Count;
-    totalPlayerEncounters += raidPlayerEncounters.Count;
-    
-    if (raidIndex % 10 == 0 || raidIndex == ulduarRaids.Count)
-    {
-        var progress = (double)raidIndex / ulduarRaids.Count * 100;
-        logger.LogInformation("Прогресс: {Current}/{Total} ({Progress:F1}%) | Энкаунтеров: {Encounters} | Игроков: {Players}", 
-            raidIndex, ulduarRaids.Count, progress, totalEncounters, totalPlayerEncounters);
-    }
-}
-
-var elapsedTime = DateTime.Now - startTime;
-
-logger.LogInformation("───────────────────────────────────────────────────────────");
-logger.LogInformation("✅ Обработка завершена");
-logger.LogInformation("───────────────────────────────────────────────────────────");
-logger.LogInformation("Сохранено:");
-logger.LogInformation("  • Рейдов: {Raids}", raidIndex);
-logger.LogInformation("  • Энкаунтеров: {Encounters}", totalEncounters);
-logger.LogInformation("  • Записей игроков: {Players}", totalPlayerEncounters);
-logger.LogInformation("Время выполнения: {Time}", elapsedTime.ToString(@"mm\:ss"));
-logger.LogInformation("═══════════════════════════════════════════════════════════");
+await raidParserService.ParseRaidsAsync(serverId, mapId, difficulty);
