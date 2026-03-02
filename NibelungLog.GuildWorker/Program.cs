@@ -121,8 +121,6 @@ var logger = loggerFactory.CreateLogger<Program>();
 
 var authService = serviceProvider.GetRequiredService<IWowCircleAuthService>();
 
-var guildName = Environment.GetEnvironmentVariable("GUILD_NAME");
-var guildId = Environment.GetEnvironmentVariable("GUILD_ID");
 var serverIdStr = Environment.GetEnvironmentVariable("WOWCIRCLE_SERVER_ID");
 var accountName = Environment.GetEnvironmentVariable("WOWCIRCLE_LOGIN");
 var accountPassword = Environment.GetEnvironmentVariable("WOWCIRCLE_PASSWORD");
@@ -139,22 +137,10 @@ if (string.IsNullOrEmpty(serverIdStr) || !int.TryParse(serverIdStr, out var serv
     return;
 }
 
-if (string.IsNullOrEmpty(guildName))
-{
-    logger.LogError("❌ Не указан GUILD_NAME");
-    return;
-}
-
-if (string.IsNullOrEmpty(guildId))
-{
-    logger.LogError("❌ Не указан GUILD_ID");
-    return;
-}
-
 logger.LogInformation("═══════════════════════════════════════════════════════════");
-logger.LogInformation("Запуск парсера гильдии");
+logger.LogInformation("Запуск парсера гильдий");
 logger.LogInformation("═══════════════════════════════════════════════════════════");
-logger.LogInformation("Гильдия: {GuildName} | Сервер: {ServerId}", guildName, serverId);
+logger.LogInformation("Сервер: {ServerId}", serverId);
 logger.LogInformation("Логи записываются в: {LogPath}", logPath);
 
 logger.LogInformation("Подключение к WowCircle...");
@@ -171,5 +157,5 @@ logger.LogInformation("✅ Авторизация успешна: {AccountName} 
 using var scope = serviceProvider.CreateScope();
 var guildProcessingService = scope.ServiceProvider.GetRequiredService<IGuildProcessingService>();
 
-await guildProcessingService.ProcessGuildAsync(guildName, guildId, serverId);
+await guildProcessingService.ProcessAllGuildsAsync(serverId);
 

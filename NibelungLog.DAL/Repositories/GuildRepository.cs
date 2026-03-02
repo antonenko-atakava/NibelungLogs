@@ -20,6 +20,12 @@ public sealed class GuildRepository : IGuildRepository
             .FirstOrDefaultAsync(g => g.GuildId == guildId, cancellationToken);
     }
 
+    public async Task<List<Guild>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Guilds
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Guild> AddAsync(Guild guild, CancellationToken cancellationToken = default)
     {
         _context.Guilds.Add(guild);
