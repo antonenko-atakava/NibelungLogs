@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using NibelungLog.DAL.Data;
+using NibelungLog.DAL.Repositories;
+using NibelungLog.Domain.Interfaces;
+using NibelungLog.Domain.Interfaces.Repositories;
+using NibelungLog.Service.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +17,23 @@ var postgresConnectionString = Environment.GetEnvironmentVariable("POSTGRES_CONN
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
+
+builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
+builder.Services.AddScoped<ICharacterSpecRepository, CharacterSpecRepository>();
+builder.Services.AddScoped<IRaidTypeRepository, RaidTypeRepository>();
+builder.Services.AddScoped<IRaidRepository, RaidRepository>();
+builder.Services.AddScoped<IEncounterRepository, EncounterRepository>();
+builder.Services.AddScoped<IPlayerEncounterRepository, PlayerEncounterRepository>();
+
+builder.Services.AddScoped<IPlayerQueryRepository, PlayerQueryRepository>();
+builder.Services.AddScoped<IRaidQueryRepository, RaidQueryRepository>();
+builder.Services.AddScoped<IEncounterQueryRepository, EncounterQueryRepository>();
+builder.Services.AddScoped<IRaidTypeQueryRepository, RaidTypeQueryRepository>();
+
+builder.Services.AddScoped<IPlayerQueryService, PlayerQueryService>();
+builder.Services.AddScoped<IRaidQueryService, RaidQueryService>();
+builder.Services.AddScoped<IEncounterQueryService, EncounterQueryService>();
+builder.Services.AddScoped<IRaidTypeQueryService, RaidTypeQueryService>();
 
 builder.Services.AddCors(options =>
 {

@@ -126,3 +126,12 @@ The project must follow strict layer separation. Each layer has specific respons
 - **NibelungLog.DiscordBot**: Discord bot application. Contains Discord-specific code, commands, and handlers.
 
 Dependencies must flow in one direction: Api/Parsers/DiscordBot → Service → DAL → Domain. Lower layers must not depend on higher layers. Domain layer must not depend on any other layer.
+
+### 28. Atomic component architecture
+All components must be designed as atomic, reusable building blocks. Components should be:
+- Single responsibility: one component, one purpose
+- Composable: can be combined to create larger components
+- Independent: minimal dependencies on parent context
+- Reusable: can be used in multiple places without modification
+
+When creating components, always prioritize reusability and composition over duplication. Extract common patterns into shared components. Use props for customization rather than creating separate components for similar use cases.
