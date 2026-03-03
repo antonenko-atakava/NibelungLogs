@@ -91,7 +91,7 @@ public sealed class RaidQueryRepository : IRaidQueryRepository
 
         return new PagedResult<RaidDto>
         {
-            Data = raids,
+            Items = raids,
             TotalCount = totalCount,
             Page = page,
             PageSize = pageSize

@@ -59,4 +59,38 @@ public sealed class PlayerQueryService : IPlayerQueryService
         return await _repository.GetPlayersByEncounterAsync(
             encounterName, encounterEntry, search, characterClass, role, page, pageSize, cancellationToken);
     }
+
+    public async Task<PlayerExtendedDetailDto?> GetPlayerExtendedDetailAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetPlayerExtendedDetailAsync(id, cancellationToken);
+    }
+
+    public async Task<PagedResult<PlayerEncounterDetailDto>> GetPlayerEncountersAsync(
+        int playerId,
+        string? encounterName,
+        string? specName,
+        string? role,
+        bool? success,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetPlayerEncountersAsync(
+            playerId, encounterName, specName, role, success, page, pageSize, cancellationToken);
+    }
+
+    public async Task<List<PlayerEncounterTimelineDto>> GetPlayerEncounterTimelineAsync(
+        int playerId,
+        string encounterEntry,
+        CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetPlayerEncounterTimelineAsync(playerId, encounterEntry, cancellationToken);
+    }
+
+    public async Task<List<EncounterListItemDto>> GetPlayerUniqueEncountersAsync(
+        int playerId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetPlayerUniqueEncountersAsync(playerId, cancellationToken);
+    }
 }

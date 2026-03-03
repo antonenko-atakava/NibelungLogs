@@ -2,7 +2,7 @@ namespace NibelungLog.Domain.Types.Dto.Response;
 
 public sealed class PagedResult<T>
 {
-    public required List<T> Data { get; set; }
+    public required List<T> Items { get; set; }
     public int TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
