@@ -1,6 +1,6 @@
 import type { PagedResult, PlayerDto, PlayerDetailDto } from "@/types/api/Player";
 
-import type { PlayerExtendedDetailDto, PlayerEncounterDetailDto, PlayerEncounterTimelineDto } from "@/types/api/Player";
+import type { PlayerExtendedDetailDto, PlayerEncounterDetailDto, PlayerEncounterTimelineDto, PlayerSpecComparisonDto } from "@/types/api/Player";
 import type { EncounterListItemDto } from "@/types/api/Encounter";
 
 export interface IPlayersApi {
@@ -12,6 +12,7 @@ export interface IPlayersApi {
   getPlayerEncounters(params: GetPlayerEncountersParams): Promise<PagedResult<PlayerEncounterDetailDto>>;
   getPlayerEncounterTimeline(playerId: number, encounterEntry: string): Promise<PlayerEncounterTimelineDto[]>;
   getPlayerUniqueEncounters(playerId: number): Promise<EncounterListItemDto[]>;
+  getPlayerSpecComparison(playerId: number, specName: string, useAverageDps: boolean, topCount?: number): Promise<PlayerSpecComparisonDto | null>;
 }
 
 export interface GetPlayersParams {

@@ -60,4 +60,11 @@ public interface IPlayerQueryService
     Task<List<EncounterListItemDto>> GetPlayerUniqueEncountersAsync(
         int playerId,
         CancellationToken cancellationToken = default);
+
+    Task<PlayerSpecComparisonDto?> GetPlayerSpecComparisonAsync(
+        int playerId,
+        string specName,
+        bool useAverageDps,
+        int topCount,
+        CancellationToken cancellationToken = default);
 }

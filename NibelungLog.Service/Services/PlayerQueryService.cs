@@ -99,4 +99,14 @@ public sealed class PlayerQueryService : IPlayerQueryService
     {
         return await _repository.GetPlayerUniqueEncountersAsync(playerId, cancellationToken);
     }
+
+    public async Task<PlayerSpecComparisonDto?> GetPlayerSpecComparisonAsync(
+        int playerId,
+        string specName,
+        bool useAverageDps,
+        int topCount,
+        CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetPlayerSpecComparisonAsync(playerId, specName, useAverageDps, topCount, cancellationToken);
+    }
 }

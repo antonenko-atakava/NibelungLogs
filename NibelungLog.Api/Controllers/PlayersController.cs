@@ -143,4 +143,29 @@ public sealed class PlayersController : ControllerBase
         
         return Ok(result);
     }
+
+    [HttpGet("{id:int}/spec-comparison")]
+    public async Task<ActionResult<PlayerSpecComparisonDto>> GetPlayerSpecComparison(
+        int id,
+        [FromQuery] string specName,
+        [FromQuery] bool useAverageDps = true,
+        [FromQuery] int topCount = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (id <= 0)
+            return BadRequest("Id must be greater than 0");
+
+        if (string.IsNullOrWhiteSpace(specName))
+            return BadRequest("SpecName is required");
+
+        if (topCount <= 0 || topCount > 100)
+            return BadRequest("TopCount must be between 1 and 100");
+
+        var result = await _playerQueryService.GetPlayerSpecComparisonAsync(id, specName, useAverageDps, topCount, cancellationToken);
+
+        if (result == null)
+            return NotFound();
+
+        return Ok(result);
+    }
 }

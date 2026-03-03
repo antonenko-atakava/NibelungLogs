@@ -101,7 +101,7 @@ export default function PlayerDetailPage() {
 
       {player.specStatistics.length > 0 && (
         <div className="mt-8">
-          <PlayerSpecsChart specStatistics={player.specStatistics} />
+          <PlayerSpecsChart specStatistics={player.specStatistics} playerId={playerId} className={player.className || player.characterClass} />
         </div>
       )}
 

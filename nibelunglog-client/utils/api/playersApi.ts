@@ -1,7 +1,7 @@
 import { apiConfig } from "./config";
 import { ApiErrorHandler } from "./errorHandler";
 import type { IPlayersApi, GetPlayersParams, GetPlayersByClassParams, GetPlayersByEncounterParams, GetPlayerEncountersParams } from "@/interfaces/api/IPlayersApi";
-import type { PagedResult, PlayerDto, PlayerDetailDto, PlayerExtendedDetailDto, PlayerEncounterDetailDto, PlayerEncounterTimelineDto } from "@/types/api/Player";
+import type { PagedResult, PlayerDto, PlayerDetailDto, PlayerExtendedDetailDto, PlayerEncounterDetailDto, PlayerEncounterTimelineDto, PlayerSpecComparisonDto } from "@/types/api/Player";
 
 class PlayersApi implements IPlayersApi {
   private readonly baseUrl: string;
@@ -164,6 +164,26 @@ class PlayersApi implements IPlayersApi {
       const response = await fetch(`${this.baseUrl}/api/players/${playerId}/encounters/unique`);
       
       return ApiErrorHandler.handleResponse<EncounterListItemDto[]>(response);
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes("fetch"))
+        throw { message: "Ошибка подключения к серверу. Проверьте, что API сервер запущен." };
+      throw error;
+    }
+  }
+
+  async getPlayerSpecComparison(playerId: number, specName: string, useAverageDps: boolean, topCount: number = 20): Promise<PlayerSpecComparisonDto | null> {
+    try {
+      const searchParams = new URLSearchParams();
+      searchParams.append("specName", specName);
+      searchParams.append("useAverageDps", useAverageDps.toString());
+      searchParams.append("topCount", topCount.toString());
+
+      const response = await fetch(`${this.baseUrl}/api/players/${playerId}/spec-comparison?${searchParams.toString()}`);
+      
+      if (response.status === 404)
+        return null;
+      
+      return ApiErrorHandler.handleResponse<PlayerSpecComparisonDto>(response);
     } catch (error) {
       if (error instanceof TypeError && error.message.includes("fetch"))
         throw { message: "Ошибка подключения к серверу. Проверьте, что API сервер запущен." };

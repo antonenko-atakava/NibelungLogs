@@ -118,6 +118,22 @@ export interface PlayerEncounterTimelineDto {
   itemLevel: string;
 }
 
+export interface PlayerSpecComparisonDto {
+  specName: string;
+  players: PlayerSpecComparisonItemDto[];
+  currentPlayerRank: number;
+  currentPlayerId: number;
+  currentPlayerName: string;
+  currentPlayerValue: number;
+}
+
+export interface PlayerSpecComparisonItemDto {
+  playerId: number;
+  characterName: string;
+  value: number;
+  isCurrentPlayer: boolean;
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;

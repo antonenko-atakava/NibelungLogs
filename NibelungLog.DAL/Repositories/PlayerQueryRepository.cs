@@ -754,4 +754,91 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
 
         return encounters;
     }
+
+    public async Task<PlayerSpecComparisonDto?> GetPlayerSpecComparisonAsync(
+        int playerId,
+        string specName,
+        bool useAverageDps,
+        int topCount,
+        CancellationToken cancellationToken = default)
+    {
+        var player = await _context.Players
+            .FirstOrDefaultAsync(p => p.Id == playerId, cancellationToken);
+
+        if (player == null)
+            return null;
+
+        var playerEncounters = await _context.PlayerEncounters
+            .Include(pe => pe.CharacterSpec)
+            .Include(pe => pe.Encounter)
+            .Include(pe => pe.Player)
+            .Where(pe => pe.CharacterSpec.Name == specName && pe.Encounter.Success == true && pe.Encounter.EncounterEntry != "33113")
+            .ToListAsync(cancellationToken);
+
+        if (playerEncounters.Count == 0)
+            return null;
+
+        var playerStats = playerEncounters
+            .GroupBy(pe => pe.PlayerId)
+            .Select(g => new
+            {
+                PlayerId = g.Key,
+                CharacterName = g.First().Player.CharacterName,
+                AverageDps = g.Average(pe => pe.Dps),
+                MaxDps = g.Max(pe => pe.Dps),
+                IsCurrentPlayer = g.Key == playerId
+            })
+            .OrderByDescending(s => useAverageDps ? s.AverageDps : s.MaxDps)
+            .ToList();
+
+        var currentPlayerStat = playerStats.FirstOrDefault(s => s.IsCurrentPlayer);
+        if (currentPlayerStat == null)
+            return null;
+
+        var currentPlayerRank = playerStats.IndexOf(currentPlayerStat) + 1;
+        var currentPlayerValue = useAverageDps ? currentPlayerStat.AverageDps : currentPlayerStat.MaxDps;
+
+        var topPlayers = playerStats
+            .Take(topCount)
+            .Select((s, index) => new PlayerSpecComparisonItemDto
+            {
+                PlayerId = s.PlayerId,
+                CharacterName = s.CharacterName,
+                Value = useAverageDps ? s.AverageDps : s.MaxDps,
+                IsCurrentPlayer = s.IsCurrentPlayer
+            })
+            .ToList();
+
+        if (!topPlayers.Any(p => p.IsCurrentPlayer))
+        {
+            var currentPlayerItem = new PlayerSpecComparisonItemDto
+            {
+                PlayerId = currentPlayerStat.PlayerId,
+                CharacterName = currentPlayerStat.CharacterName,
+                Value = currentPlayerValue,
+                IsCurrentPlayer = true
+            };
+
+            var insertIndex = topPlayers.Count;
+            for (var i = 0; i < topPlayers.Count; i++)
+            {
+                if (topPlayers[i].Value < currentPlayerValue)
+                {
+                    insertIndex = i;
+                    break;
+                }
+            }
+            topPlayers.Insert(insertIndex, currentPlayerItem);
+        }
+
+        return new PlayerSpecComparisonDto
+        {
+            SpecName = specName,
+            Players = topPlayers,
+            CurrentPlayerRank = currentPlayerRank,
+            CurrentPlayerId = playerId,
+            CurrentPlayerName = player.CharacterName,
+            CurrentPlayerValue = currentPlayerValue
+        };
+    }
 }
