@@ -19,7 +19,7 @@ public sealed class EncounterQueryRepository : IEncounterQueryRepository
         var grouped = await _context.Encounters
             .Include(e => e.Raid)
                 .ThenInclude(r => r!.RaidType)
-            .Where(e => e.EncounterName != null && e.Raid != null && e.Raid.RaidType != null)
+            .Where(e => e.EncounterName != null && e.Raid != null && e.Raid.RaidType != null && e.EncounterEntry != "33113")
             .GroupBy(e => new
             {
                 RaidTypeName = e.Raid!.RaidType!.Name,

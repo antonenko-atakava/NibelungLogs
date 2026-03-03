@@ -7,6 +7,12 @@ public interface IPlayerQueryService
     Task<PagedResult<PlayerDto>> GetPlayersAsync(
         string? search,
         string? role,
+        string? race,
+        string? faction,
+        double? itemLevelMin,
+        double? itemLevelMax,
+        string? sortField,
+        string? sortDirection,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);

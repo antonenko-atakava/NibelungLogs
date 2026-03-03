@@ -15,6 +15,7 @@ public sealed class PlayerDto
     public long TotalHealing { get; set; }
     public double AverageDps { get; set; }
     public double MaxDps { get; set; }
+    public double? AverageHps { get; set; }
     public double? MaxHps { get; set; }
     public DateTime? EncounterDate { get; set; }
     public long? EncounterDuration { get; set; }
