@@ -12,6 +12,7 @@ export interface PlayerDto {
   totalHealing: number;
   averageDps: number;
   maxDps: number;
+  averageHps: number | null;
   maxHps: number | null;
   encounterDate: string | null;
   encounterDuration: number | null;

@@ -19,11 +19,17 @@ public sealed class PlayerQueryService : IPlayerQueryService
     public async Task<PagedResult<PlayerDto>> GetPlayersAsync(
         string? search,
         string? role,
+        string? race,
+        string? faction,
+        double? itemLevelMin,
+        double? itemLevelMax,
+        string? sortField,
+        string? sortDirection,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        return await _repository.GetPlayersAsync(search, role, page, pageSize, cancellationToken);
+        return await _repository.GetPlayersAsync(search, role, race, faction, itemLevelMin, itemLevelMax, sortField, sortDirection, page, pageSize, cancellationToken);
     }
 
     public async Task<PlayerDetailDto?> GetPlayerByIdAsync(int id, CancellationToken cancellationToken = default)

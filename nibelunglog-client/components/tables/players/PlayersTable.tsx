@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -10,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { ClassBadge } from "@/components/wow/ClassBadge";
 import { RoleBadge } from "@/components/wow/RoleBadge";
 import { getClassColor } from "@/utils/wow/classColors";
@@ -19,9 +22,16 @@ import type { PlayerDto } from "@/types/api/Player";
 interface PlayersTableProps {
   players: PlayerDto[];
   isLoading?: boolean;
+  onSortChange?: (sortField: string | null, sortDirection: "asc" | "desc") => void;
 }
 
-export function PlayersTable({ players, isLoading }: PlayersTableProps) {
+type SortField = "averageDps" | "maxDps" | "averageHps" | "maxHps" | "totalEncounters" | null;
+type SortDirection = "asc" | "desc";
+
+export function PlayersTable({ players, isLoading, onSortChange }: PlayersTableProps) {
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
   if (isLoading)
     return (
       <div className="flex items-center justify-center p-8">
@@ -47,28 +57,83 @@ export function PlayersTable({ players, isLoading }: PlayersTableProps) {
     return formatNumber(Math.round(value));
   };
 
+  const formatHps = (value: number | null): string => {
+    if (value === null || value === undefined)
+      return "-";
+    return formatNumber(Math.round(value));
+  };
+
+  const handleSort = (field: SortField) => {
+    let newDirection: SortDirection;
+    if (sortField === field) {
+      newDirection = sortDirection === "asc" ? "desc" : "asc";
+    } else {
+      newDirection = "desc";
+    }
+    setSortField(field);
+    setSortDirection(newDirection);
+    if (onSortChange)
+      onSortChange(field, newDirection);
+  };
+
+  const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
+    const isActive = sortField === field;
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-auto p-0 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        onClick={() => handleSort(field)}
+      >
+        <span className="flex items-center gap-1">
+          {children}
+          {isActive ? (
+            sortDirection === "asc" ? (
+              <ArrowUp className="h-3 w-3" />
+            ) : (
+              <ArrowDown className="h-3 w-3" />
+            )
+          ) : (
+            <ArrowUpDown className="h-3 w-3 opacity-50" />
+          )}
+        </span>
+      </Button>
+    );
+  };
+
   return (
-    <div className="border border-border/40 rounded-2xl overflow-hidden bg-card shadow-lg">
-      <Table>
+    <Table>
         <TableHeader>
           <TableRow className="bg-secondary/30 border-b border-border/30">
-            <TableHead className="w-[60px] font-semibold text-xs uppercase tracking-wider text-muted-foreground">#</TableHead>
+            <TableHead className="w-[80px] px-6 font-semibold text-xs uppercase tracking-wider text-muted-foreground">#</TableHead>
             <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Имя</TableHead>
-            <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Класс</TableHead>
-            <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Специализация</TableHead>
-            <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Роль</TableHead>
-            <TableHead className="text-right font-semibold text-xs uppercase tracking-wider text-muted-foreground">Средний DPS</TableHead>
-            <TableHead className="text-right font-semibold text-xs uppercase tracking-wider text-muted-foreground">Макс. DPS</TableHead>
-            <TableHead className="text-right font-semibold text-xs uppercase tracking-wider text-muted-foreground">Энкаунтеров</TableHead>
+            <TableHead className="text-center font-semibold text-xs uppercase tracking-wider text-muted-foreground">Класс</TableHead>
+            <TableHead className="text-center font-semibold text-xs uppercase tracking-wider text-muted-foreground">Специализация</TableHead>
+            <TableHead className="text-center font-semibold text-xs uppercase tracking-wider text-muted-foreground">Роль</TableHead>
+            <TableHead className="text-center">
+              <SortButton field="averageDps">Средний DPS</SortButton>
+            </TableHead>
+            <TableHead className="text-center">
+              <SortButton field="maxDps">Макс. DPS</SortButton>
+            </TableHead>
+            <TableHead className="text-center">
+              <SortButton field="averageHps">Средний HPS</SortButton>
+            </TableHead>
+            <TableHead className="text-center">
+              <SortButton field="maxHps">Макс. HPS</SortButton>
+            </TableHead>
+            <TableHead className="text-center px-6">
+              <SortButton field="totalEncounters">Энкаунтеров</SortButton>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {players.map((player, index) => (
             <TableRow
               key={player.encounterId ? `${player.id}-${player.encounterId}` : `${player.id}-${index}`}
-              className="hover:bg-secondary/20 transition-colors border-b border-border/20"
+              className="hover:bg-secondary/20 transition-colors border-b border-border/20 last:border-b-0"
             >
-              <TableCell className="font-medium text-muted-foreground text-sm">
+              <TableCell className="font-medium text-muted-foreground text-sm px-6">
                 {player.rank}
               </TableCell>
               <TableCell className="font-semibold text-base">
@@ -94,31 +159,40 @@ export function PlayersTable({ players, isLoading }: PlayersTableProps) {
                   </span>
                 </Link>
               </TableCell>
-              <TableCell>
-                <ClassBadge 
-                  className={player.className || player.characterClass} 
-                  variant="outline"
-                />
+              <TableCell className="text-center">
+                <div className="flex justify-center">
+                  <ClassBadge 
+                    className={player.className || player.characterClass} 
+                    variant="outline"
+                  />
+                </div>
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              <TableCell className="text-center text-sm text-muted-foreground">
                 {player.specName || "-"}
               </TableCell>
-              <TableCell>
-                <RoleBadge role={player.role} />
+              <TableCell className="text-center">
+                <div className="flex justify-center">
+                  <RoleBadge role={player.role} />
+                </div>
               </TableCell>
-              <TableCell className="text-right font-medium text-sm">
+              <TableCell className="text-center font-medium text-sm">
                 {formatDps(player.averageDps)}
               </TableCell>
-              <TableCell className="text-right font-semibold text-primary text-sm">
+              <TableCell className="text-center font-semibold text-primary text-sm">
                 {formatDps(player.maxDps)}
               </TableCell>
-              <TableCell className="text-right text-sm text-muted-foreground">
+              <TableCell className="text-center font-medium text-sm">
+                {formatHps(player.averageHps)}
+              </TableCell>
+              <TableCell className="text-center font-semibold text-primary text-sm">
+                {formatHps(player.maxHps)}
+              </TableCell>
+              <TableCell className="text-center text-sm text-muted-foreground px-6">
                 {player.totalEncounters}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </div>
   );
 }

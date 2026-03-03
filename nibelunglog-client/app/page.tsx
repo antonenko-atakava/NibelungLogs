@@ -62,7 +62,7 @@ export default function Home() {
                 <Button 
                   variant="default" 
                   className="w-full h-11 text-base font-medium bg-gradient-to-r from-[#C41F3B] to-[#F58CBA] hover:from-[#F58CBA] hover:to-[#C41F3B] transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-[#C41F3B]/30"
-                >
+          >
                   Перейти к рейдам
                 </Button>
               </Link>

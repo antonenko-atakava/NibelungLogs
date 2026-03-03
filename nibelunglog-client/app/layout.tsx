@@ -17,7 +17,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen bg-background">
         <Header />
         <main className="min-h-[calc(100vh-5rem)]">
-          {children}
+        {children}
         </main>
       </body>
     </html>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { PlayerFilters } from "@/types/players/PlayerFilters";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PlayersPaginationProps {
   currentPage: number;
@@ -34,8 +34,43 @@ export function PlayersPagination({
   if (totalPages <= 1)
     return null;
 
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 7;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 5; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-6 border-t border-border/30 bg-secondary/10">
+    <div className="flex items-center justify-between gap-4 px-6 py-4 border-t border-border/30 bg-secondary/10 rounded-b-2xl">
       <div className="text-sm text-muted-foreground font-light">
         Показано <span className="font-medium text-foreground">{startItem}-{endItem}</span> из{" "}
         <span className="font-medium text-foreground">{totalCount}</span>
@@ -50,8 +85,30 @@ export function PlayersPagination({
         >
           Назад
         </Button>
-        <div className="text-sm font-medium px-4 py-1.5 rounded-lg bg-primary/10 text-primary">
-          Страница {currentPage} из {totalPages}
+        <div className="flex items-center gap-1">
+          {getPageNumbers().map((page, index) => {
+            if (page === "...") {
+              return (
+                <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
+                  ...
+                </span>
+              );
+            }
+            const pageNum = page as number;
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "ghost"}
+                size="sm"
+                onClick={() => onPageChange(pageNum)}
+                className={`h-9 min-w-[36px] px-2 font-medium ${
+                  currentPage === pageNum ? "" : "hover:bg-secondary/40"
+                }`}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
         </div>
         <Button
           variant="outline"

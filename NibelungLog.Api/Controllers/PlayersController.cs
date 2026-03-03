@@ -24,7 +24,8 @@ public sealed class PlayersController : ControllerBase
         query ??= new GetPlayersQuery();
 
         var result = await _playerQueryService.GetPlayersAsync(
-            query.Search, query.Role, query.Page, query.PageSize, cancellationToken);
+            query.Search, query.Role, query.Race, query.Faction, query.ItemLevelMin, query.ItemLevelMax, 
+            query.SortField, query.SortDirection, query.Page, query.PageSize, cancellationToken);
         
         return Ok(result);
     }
