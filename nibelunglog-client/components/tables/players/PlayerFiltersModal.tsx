@@ -8,9 +8,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { usePlayerFiltersStore } from "@/stores/playerFiltersStore";
 import { specIconMapByClassAndSpec } from "@/utils/wow/specIcons";
 import { raceList, factionByRaceName, getRaceId } from "@/utils/wow/raceMappings";
@@ -38,13 +38,18 @@ const factionList = [
   "Орда",
 ];
 
+const MIN_ILVL = 0;
+const MAX_ILVL = 300;
+
 export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalProps) {
   const { filters, updateFilter, resetFilters } = usePlayerFiltersStore();
   const [localRole, setLocalRole] = useState(filters.role || "");
   const [localClass, setLocalClass] = useState(filters.characterClass || "");
   const [localSpec, setLocalSpec] = useState(filters.spec || "");
-  const [localItemLevelMin, setLocalItemLevelMin] = useState(filters.itemLevelMin?.toString() || "");
-  const [localItemLevelMax, setLocalItemLevelMax] = useState(filters.itemLevelMax?.toString() || "");
+  const [localItemLevelRange, setLocalItemLevelRange] = useState<number[]>([
+    filters.itemLevelMin ?? MIN_ILVL,
+    filters.itemLevelMax ?? MAX_ILVL,
+  ]);
   const [localRace, setLocalRace] = useState(filters.race || "");
   const [localFaction, setLocalFaction] = useState(filters.faction || "");
 
@@ -53,8 +58,10 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
       setLocalRole(filters.role || "");
       setLocalClass(filters.characterClass || "");
       setLocalSpec(filters.spec || "");
-      setLocalItemLevelMin(filters.itemLevelMin?.toString() || "");
-      setLocalItemLevelMax(filters.itemLevelMax?.toString() || "");
+      setLocalItemLevelRange([
+        filters.itemLevelMin ?? MIN_ILVL,
+        filters.itemLevelMax ?? MAX_ILVL,
+      ]);
       setLocalRace(filters.race || "");
       setLocalFaction(filters.faction || "");
     }
@@ -87,8 +94,8 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
     updateFilter("role", localRole === "all" ? undefined : localRole || undefined);
     updateFilter("characterClass", localClass === "all" ? undefined : localClass || undefined);
     updateFilter("spec", localSpec === "all" ? undefined : localSpec || undefined);
-    updateFilter("itemLevelMin", localItemLevelMin ? parseFloat(localItemLevelMin) : undefined);
-    updateFilter("itemLevelMax", localItemLevelMax ? parseFloat(localItemLevelMax) : undefined);
+    updateFilter("itemLevelMin", localItemLevelRange[0] !== MIN_ILVL ? localItemLevelRange[0] : undefined);
+    updateFilter("itemLevelMax", localItemLevelRange[1] !== MAX_ILVL ? localItemLevelRange[1] : undefined);
     
     if (localFaction && localFaction !== "all") {
       updateFilter("faction", localFaction);
@@ -112,8 +119,7 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
     setLocalRole("");
     setLocalClass("");
     setLocalSpec("");
-    setLocalItemLevelMin("");
-    setLocalItemLevelMax("");
+    setLocalItemLevelRange([MIN_ILVL, MAX_ILVL]);
     setLocalRace("");
     setLocalFaction("");
     resetFilters();
@@ -122,15 +128,15 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] overflow-hidden">
+        <DialogHeader className="pb-2">
           <DialogTitle>Фильтры</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
-          <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Класс</label>
             <Select value={localClass || "all"} onValueChange={setLocalClass}>
-              <SelectTrigger>
+              <SelectTrigger className="h-10 w-full">
                 <SelectValue placeholder="Выберите класс" />
               </SelectTrigger>
               <SelectContent>
@@ -143,14 +149,14 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Специализация</label>
             <Select
               value={localSpec || "all"}
               onValueChange={setLocalSpec}
               disabled={!localClass}
             >
-              <SelectTrigger disabled={!localClass}>
+              <SelectTrigger className="h-10 w-full" disabled={!localClass}>
                 <SelectValue placeholder="Выберите специализацию" />
               </SelectTrigger>
               <SelectContent>
@@ -163,10 +169,10 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Роль</label>
             <Select value={localRole || "all"} onValueChange={setLocalRole}>
-              <SelectTrigger>
+              <SelectTrigger className="h-10 w-full">
                 <SelectValue placeholder="Выберите роль" />
               </SelectTrigger>
               <SelectContent>
@@ -177,30 +183,10 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Илвл от</label>
-              <Input
-                type="number"
-                placeholder="Минимум"
-                value={localItemLevelMin}
-                onChange={(e) => setLocalItemLevelMin(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Илвл до</label>
-              <Input
-                type="number"
-                placeholder="Максимум"
-                value={localItemLevelMax}
-                onChange={(e) => setLocalItemLevelMax(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Фракция</label>
             <Select value={localFaction || "all"} onValueChange={setLocalFaction}>
-              <SelectTrigger>
+              <SelectTrigger className="h-10 w-full">
                 <SelectValue placeholder="Выберите фракцию" />
               </SelectTrigger>
               <SelectContent>
@@ -213,10 +199,28 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium">Илвл</label>
+              <span className="text-sm text-muted-foreground">
+                {localItemLevelRange[0]} - {localItemLevelRange[1]}
+              </span>
+            </div>
+            <div className="pt-[22px]">
+              <Slider
+                value={localItemLevelRange}
+                onValueChange={setLocalItemLevelRange}
+                min={MIN_ILVL}
+                max={MAX_ILVL}
+                step={1}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Раса</label>
-            <Select value={localRace || "all"} onValueChange={setLocalRace} disabled={localFaction && localFaction !== "all" && availableRaces.length === 0}>
-              <SelectTrigger disabled={localFaction && localFaction !== "all" && availableRaces.length === 0}>
+            <Select value={localRace || "all"} onValueChange={setLocalRace} disabled={!!(localFaction && localFaction !== "all" && availableRaces.length === 0)}>
+              <SelectTrigger className="h-10 w-full" disabled={!!(localFaction && localFaction !== "all" && availableRaces.length === 0)}>
                 <SelectValue placeholder="Выберите расу" />
               </SelectTrigger>
               <SelectContent>
@@ -230,11 +234,11 @@ export function PlayerFiltersModal({ open, onOpenChange }: PlayerFiltersModalPro
             </Select>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClear}>
+        <DialogFooter className="pt-3 mt-3 border-t border-border/40 gap-2 justify-between">
+          <Button variant="destructive" onClick={handleClear} className="w-full sm:w-auto">
             Сбросить
           </Button>
-          <Button onClick={handleApply}>
+          <Button variant="outline" onClick={handleApply} className="w-full sm:w-auto bg-white text-black hover:bg-white/90 hover:text-black border-border/60">
             Применить
           </Button>
         </DialogFooter>

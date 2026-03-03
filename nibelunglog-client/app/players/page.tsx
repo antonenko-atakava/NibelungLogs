@@ -104,7 +104,7 @@ export default function PlayersPage() {
         <Button
           variant="outline"
           onClick={() => setIsFiltersOpen(true)}
-          className="gap-2"
+          className="gap-2 h-11"
         >
           <Filter className="h-4 w-4" />
           Фильтр
