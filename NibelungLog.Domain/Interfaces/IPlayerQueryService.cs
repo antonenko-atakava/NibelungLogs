@@ -33,4 +33,25 @@ public interface IPlayerQueryService
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task<PlayerExtendedDetailDto?> GetPlayerExtendedDetailAsync(int id, CancellationToken cancellationToken = default);
+    
+    Task<PagedResult<PlayerEncounterDetailDto>> GetPlayerEncountersAsync(
+        int playerId,
+        string? encounterName,
+        string? specName,
+        string? role,
+        bool? success,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<List<PlayerEncounterTimelineDto>> GetPlayerEncounterTimelineAsync(
+        int playerId,
+        string encounterEntry,
+        CancellationToken cancellationToken = default);
+
+    Task<List<EncounterListItemDto>> GetPlayerUniqueEncountersAsync(
+        int playerId,
+        CancellationToken cancellationToken = default);
 }
