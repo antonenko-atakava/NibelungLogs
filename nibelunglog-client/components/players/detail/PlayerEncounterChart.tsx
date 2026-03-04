@@ -75,6 +75,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
   const [localComparisonPlayerName, setLocalComparisonPlayerName] = useState<string>("");
   const [playerSearchResults, setPlayerSearchResults] = useState<Array<{ id: number; name: string }>>([]);
   const [isSearchingPlayers, setIsSearchingPlayers] = useState(false);
+  const [viewMode, setViewMode] = useState<"date" | "encounter">("encounter");
 
   useEffect(() => {
     const fetchRaidTypes = async () => {
@@ -331,7 +332,127 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
 
   const chartData = useMemo(() => {
     if (encounters.length === 0 && comparisonEncounters.length === 0)
-    return null;
+      return null;
+
+    if (viewMode === "encounter") {
+      const allTimeKeys = new Set<string>();
+      encounters.forEach(e => allTimeKeys.add(e.startTime));
+      if (comparisonPlayerId) {
+        comparisonEncounters.forEach(e => allTimeKeys.add(e.startTime));
+      }
+
+      const sortedTimeKeys = Array.from(allTimeKeys).sort((a, b) => 
+        new Date(a).getTime() - new Date(b).getTime()
+      );
+
+      const encountersByTime = new Map<string, PlayerEncounterDetailDto>();
+      encounters.forEach(e => {
+        encountersByTime.set(e.startTime, e);
+      });
+
+      const comparisonEncountersByTime = new Map<string, PlayerEncounterDetailDto>();
+      comparisonEncounters.forEach(e => {
+        comparisonEncountersByTime.set(e.startTime, e);
+      });
+
+      const labels = sortedTimeKeys.map(timeKey => {
+        const encounter = encountersByTime.get(timeKey) || comparisonEncountersByTime.get(timeKey);
+        if (!encounter)
+          return "";
+        const name = encounter.encounterName;
+        return name.length > 25 ? name.substring(0, 25) + "..." : name;
+      });
+
+      const dpsData = sortedTimeKeys.map(timeKey => {
+        const encounter = encountersByTime.get(timeKey);
+        return encounter ? Math.round(encounter.dps) : null;
+      });
+
+      const hpsData = isHealer ? sortedTimeKeys.map(timeKey => {
+        const encounter = encountersByTime.get(timeKey);
+        return encounter && encounter.hps ? Math.round(encounter.hps) : null;
+      }) : null;
+
+      const comparisonDpsData = comparisonPlayerId ? sortedTimeKeys.map(timeKey => {
+        const encounter = comparisonEncountersByTime.get(timeKey);
+        return encounter ? Math.round(encounter.dps) : null;
+      }) : null;
+
+      const comparisonHpsData = isHealer && comparisonPlayerId ? sortedTimeKeys.map(timeKey => {
+        const encounter = comparisonEncountersByTime.get(timeKey);
+        return encounter && encounter.hps ? Math.round(encounter.hps) : null;
+      }) : null;
+
+      return {
+        labels,
+        datasets: [
+          ...(isHealer && hpsData ? [{
+            label: "HPS",
+            data: hpsData,
+            borderColor: "rgba(34, 197, 94, 1)",
+            backgroundColor: "rgba(34, 197, 94, 0.05)",
+            fill: true,
+            tension: 0.5,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: "rgba(34, 197, 94, 1)",
+            pointBorderColor: "rgba(255, 255, 255, 1)",
+            pointBorderWidth: 2,
+            borderWidth: 3,
+            spanGaps: false,
+          }] : []),
+          {
+            label: "DPS",
+            data: dpsData,
+            borderColor: "rgba(100, 210, 255, 1)",
+            backgroundColor: "rgba(100, 210, 255, 0.05)",
+            fill: true,
+            tension: 0.5,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: "rgba(100, 210, 255, 1)",
+            pointBorderColor: "rgba(255, 255, 255, 1)",
+            pointBorderWidth: 2,
+            borderWidth: 3,
+            spanGaps: false,
+          },
+          ...(comparisonPlayerId ? [
+            ...(isHealer && comparisonHpsData ? [{
+              label: `HPS (${comparisonPlayerName})`,
+              data: comparisonHpsData,
+              borderColor: "rgba(251, 191, 36, 1)",
+              backgroundColor: "rgba(251, 191, 36, 0.05)",
+              fill: false,
+              tension: 0.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: "rgba(251, 191, 36, 1)",
+              pointBorderColor: "rgba(255, 255, 255, 1)",
+              pointBorderWidth: 2,
+              borderWidth: 3,
+              borderDash: [8, 4],
+              spanGaps: false,
+            }] : []),
+            {
+              label: `DPS (${comparisonPlayerName})`,
+              data: comparisonDpsData || [],
+              borderColor: "rgba(251, 191, 36, 1)",
+              backgroundColor: "rgba(251, 191, 36, 0.05)",
+              fill: false,
+              tension: 0.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: "rgba(251, 191, 36, 1)",
+              pointBorderColor: "rgba(255, 255, 255, 1)",
+              pointBorderWidth: 2,
+              borderWidth: 3,
+              borderDash: [8, 4],
+              spanGaps: false,
+            },
+          ] : []),
+        ],
+      };
+    }
 
     const allDates = new Set<string>();
     encounters.forEach(e => allDates.add(formatDate(e.startTime)));
@@ -447,7 +568,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
         ] : []),
       ],
     };
-  }, [encounters, comparisonEncounters, isHealer, comparisonPlayerId, comparisonPlayerName]);
+  }, [encounters, comparisonEncounters, isHealer, comparisonPlayerId, comparisonPlayerName, viewMode]);
 
   const chartOptions = useMemo(() => ({
     responsive: true,
@@ -498,12 +619,16 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
       },
       x: {
         ticks: {
+          display: viewMode !== "encounter",
           color: "rgba(255, 255, 255, 0.7)",
-          maxRotation: 45,
-          minRotation: 45,
+          maxRotation: viewMode === "encounter" ? 90 : 45,
+          minRotation: viewMode === "encounter" ? 90 : 45,
           font: {
-            size: 11,
+            size: viewMode === "encounter" ? 9 : 11,
           },
+          maxTicksLimit: viewMode === "encounter" ? 20 : undefined,
+          autoSkip: viewMode === "encounter",
+          autoSkipPadding: viewMode === "encounter" ? 2 : 0,
         },
         grid: {
           color: "rgba(255, 255, 255, 0.1)",
@@ -511,17 +636,40 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
         },
       },
     },
-  }), []);
+  }), [viewMode]);
 
   return (
     <>
     <Card className="border-border/40 bg-card shadow-lg">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <TrendingUp className="size-5" />
+            <TrendingUp className="size-5" />
             Динамика производительности
           </CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-input/40 rounded-lg p-1 border border-border/40">
+              <button
+                onClick={() => setViewMode("encounter")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === "encounter"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                По энкаунтерам
+              </button>
+              <button
+                onClick={() => setViewMode("date")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === "date"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                По датам
+              </button>
+            </div>
             <Button
               variant="outline"
               onClick={() => setIsFiltersOpen(true)}
@@ -530,6 +678,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
               <Filter className="h-4 w-4" />
               Фильтр
             </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -554,7 +703,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
     </Card>
 
     <Dialog open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-      <DialogContent className="sm:max-w-[600px] overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] overflow-visible">
         <DialogHeader className="pb-2">
           <DialogTitle>Фильтры</DialogTitle>
         </DialogHeader>
@@ -639,7 +788,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
                 className="h-10 bg-input/60"
               />
               {playerSearchResults.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-card border border-border/40 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-[100] w-full mt-1 bg-card border border-border/40 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {playerSearchResults.map((player) => (
                     <button
                       key={player.id}
@@ -647,13 +796,13 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
                         setLocalComparisonPlayerName(player.name);
                         setPlayerSearchResults([]);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-input/40 transition-colors"
+                      className="w-full text-left px-4 py-2 hover:bg-input/40 transition-colors text-white"
                     >
                       {player.name}
                     </button>
                   ))}
-                  </div>
-                )}
+                </div>
+              )}
               </div>
             </div>
           </div>
