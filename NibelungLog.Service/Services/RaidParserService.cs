@@ -63,14 +63,13 @@ public sealed class RaidParserService : IRaidParserService
                 raidEncounters.Add(encounter);
 
                 var players = await _authService.GetEncounterPlayersAsync(serverId, raid.Id, encounter.EncounterEntry, encounter.StartTime, cancellationToken);
-
-                await Task.Delay(300, cancellationToken);
-
                 raidPlayerEncounters.AddRange(players);
             }
 
             await _raidDataService.SaveSingleRaidDataAsync(raid, raidEncounters, raidPlayerEncounters, cancellationToken);
-
+            await Task.Delay(300, cancellationToken);
+            
+            
             totalEncounters += raidEncounters.Count;
             totalPlayerEncounters += raidPlayerEncounters.Count;
 
