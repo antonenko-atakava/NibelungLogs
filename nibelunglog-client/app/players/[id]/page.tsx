@@ -118,7 +118,7 @@ export default function PlayerDetailPage() {
       )}
 
       <div className="mt-8">
-        <PlayerEncounterChart playerId={playerId} />
+        <PlayerEncounterChart playerId={playerId} specStatistics={player.specStatistics} />
       </div>
 
       <div className="mt-8">

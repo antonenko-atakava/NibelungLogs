@@ -95,6 +95,9 @@ public sealed class PlayersController : ControllerBase
         [FromQuery] string? specName = null,
         [FromQuery] string? role = null,
         [FromQuery] bool? success = null,
+        [FromQuery] int? raidTypeId = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25,
         CancellationToken cancellationToken = default)
@@ -109,7 +112,7 @@ public sealed class PlayersController : ControllerBase
             return BadRequest("PageSize must be between 1 and 100");
 
         var result = await _playerQueryService.GetPlayerEncountersAsync(
-            id, encounterName, specName, role, success, page, pageSize, cancellationToken);
+            id, encounterName, specName, role, success, raidTypeId, startDate, endDate, page, pageSize, cancellationToken);
         
         return Ok(result);
     }
@@ -134,12 +137,13 @@ public sealed class PlayersController : ControllerBase
     [HttpGet("{id:int}/encounters/unique")]
     public async Task<ActionResult<List<EncounterListItemDto>>> GetPlayerUniqueEncounters(
         int id,
+        [FromQuery] int? raidTypeId = null,
         CancellationToken cancellationToken = default)
     {
         if (id <= 0)
             return BadRequest("Id must be greater than 0");
 
-        var result = await _playerQueryService.GetPlayerUniqueEncountersAsync(id, cancellationToken);
+        var result = await _playerQueryService.GetPlayerUniqueEncountersAsync(id, raidTypeId, cancellationToken);
         
         return Ok(result);
     }

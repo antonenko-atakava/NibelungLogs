@@ -637,6 +637,9 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         string? specName,
         string? role,
         bool? success,
+        int? raidTypeId,
+        DateTime? startDate,
+        DateTime? endDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -660,6 +663,15 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
 
         if (success.HasValue)
             query = query.Where(pe => pe.Encounter.Success == success.Value);
+
+        if (raidTypeId.HasValue)
+            query = query.Where(pe => pe.Encounter.Raid.RaidTypeId == raidTypeId.Value);
+
+        if (startDate.HasValue)
+            query = query.Where(pe => pe.Encounter.StartTime >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(pe => pe.Encounter.StartTime <= endDate.Value.AddDays(1).AddTicks(-1));
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -738,11 +750,19 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
 
     public async Task<List<EncounterListItemDto>> GetPlayerUniqueEncountersAsync(
         int playerId,
+        int? raidTypeId,
         CancellationToken cancellationToken = default)
     {
-        var encounters = await _context.PlayerEncounters
+        var query = _context.PlayerEncounters
             .Include(pe => pe.Encounter)
-            .Where(pe => pe.PlayerId == playerId)
+                .ThenInclude(e => e.Raid)
+                    .ThenInclude(r => r.RaidType)
+            .Where(pe => pe.PlayerId == playerId);
+
+        if (raidTypeId.HasValue)
+            query = query.Where(pe => pe.Encounter.Raid.RaidTypeId == raidTypeId.Value);
+
+        var encounters = await query
             .GroupBy(pe => new { pe.Encounter.EncounterEntry, pe.Encounter.EncounterName })
             .Select(g => new EncounterListItemDto
             {

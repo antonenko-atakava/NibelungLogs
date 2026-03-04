@@ -11,7 +11,7 @@ export interface IPlayersApi {
   getPlayerExtended(id: number): Promise<PlayerExtendedDetailDto | null>;
   getPlayerEncounters(params: GetPlayerEncountersParams): Promise<PagedResult<PlayerEncounterDetailDto>>;
   getPlayerEncounterTimeline(playerId: number, encounterEntry: string): Promise<PlayerEncounterTimelineDto[]>;
-  getPlayerUniqueEncounters(playerId: number): Promise<EncounterListItemDto[]>;
+  getPlayerUniqueEncounters(playerId: number, raidTypeId?: number | null): Promise<EncounterListItemDto[]>;
   getPlayerSpecComparison(playerId: number, specName: string, useAverageDps: boolean, topCount?: number, raidTypeId?: number | null): Promise<PlayerSpecComparisonDto | null>;
 }
 
@@ -57,6 +57,9 @@ export interface GetPlayerEncountersParams {
   specName?: string;
   role?: string;
   success?: boolean;
+  raidTypeId?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
   page?: number;
   pageSize?: number;
 }

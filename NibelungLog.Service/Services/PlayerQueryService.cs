@@ -77,12 +77,15 @@ public sealed class PlayerQueryService : IPlayerQueryService
         string? specName,
         string? role,
         bool? success,
+        int? raidTypeId,
+        DateTime? startDate,
+        DateTime? endDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
         return await _repository.GetPlayerEncountersAsync(
-            playerId, encounterName, specName, role, success, page, pageSize, cancellationToken);
+            playerId, encounterName, specName, role, success, raidTypeId, startDate, endDate, page, pageSize, cancellationToken);
     }
 
     public async Task<List<PlayerEncounterTimelineDto>> GetPlayerEncounterTimelineAsync(
@@ -95,9 +98,10 @@ public sealed class PlayerQueryService : IPlayerQueryService
 
     public async Task<List<EncounterListItemDto>> GetPlayerUniqueEncountersAsync(
         int playerId,
+        int? raidTypeId,
         CancellationToken cancellationToken = default)
     {
-        return await _repository.GetPlayerUniqueEncountersAsync(playerId, cancellationToken);
+        return await _repository.GetPlayerUniqueEncountersAsync(playerId, raidTypeId, cancellationToken);
     }
 
     public async Task<PlayerSpecComparisonDto?> GetPlayerSpecComparisonAsync(

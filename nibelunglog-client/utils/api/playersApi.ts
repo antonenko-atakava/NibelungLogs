@@ -135,6 +135,12 @@ class PlayersApi implements IPlayersApi {
         searchParams.append("role", params.role);
       if (params.success !== undefined)
         searchParams.append("success", params.success.toString());
+      if (params.raidTypeId !== undefined && params.raidTypeId !== null)
+        searchParams.append("raidTypeId", params.raidTypeId.toString());
+      if (params.startDate)
+        searchParams.append("startDate", params.startDate);
+      if (params.endDate)
+        searchParams.append("endDate", params.endDate);
 
       const response = await fetch(`${this.baseUrl}/api/players/${params.playerId}/encounters?${searchParams.toString()}`);
       
@@ -159,9 +165,17 @@ class PlayersApi implements IPlayersApi {
     }
   }
 
-  async getPlayerUniqueEncounters(playerId: number): Promise<EncounterListItemDto[]> {
+  async getPlayerUniqueEncounters(playerId: number, raidTypeId?: number | null): Promise<EncounterListItemDto[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/players/${playerId}/encounters/unique`);
+      const searchParams = new URLSearchParams();
+      if (raidTypeId !== undefined && raidTypeId !== null)
+        searchParams.append("raidTypeId", raidTypeId.toString());
+
+      const url = searchParams.toString() 
+        ? `${this.baseUrl}/api/players/${playerId}/encounters/unique?${searchParams.toString()}`
+        : `${this.baseUrl}/api/players/${playerId}/encounters/unique`;
+
+      const response = await fetch(url);
       
       return ApiErrorHandler.handleResponse<EncounterListItemDto[]>(response);
     } catch (error) {

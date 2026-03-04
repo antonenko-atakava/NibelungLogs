@@ -48,6 +48,9 @@ public interface IPlayerQueryService
         string? specName,
         string? role,
         bool? success,
+        int? raidTypeId,
+        DateTime? startDate,
+        DateTime? endDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
@@ -59,6 +62,7 @@ public interface IPlayerQueryService
 
     Task<List<EncounterListItemDto>> GetPlayerUniqueEncountersAsync(
         int playerId,
+        int? raidTypeId,
         CancellationToken cancellationToken = default);
 
     Task<PlayerSpecComparisonDto?> GetPlayerSpecComparisonAsync(
