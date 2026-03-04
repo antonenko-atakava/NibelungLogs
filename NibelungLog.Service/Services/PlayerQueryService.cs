@@ -105,8 +105,9 @@ public sealed class PlayerQueryService : IPlayerQueryService
         string specName,
         bool useAverageDps,
         int topCount,
+        int? raidTypeId = null,
         CancellationToken cancellationToken = default)
     {
-        return await _repository.GetPlayerSpecComparisonAsync(playerId, specName, useAverageDps, topCount, cancellationToken);
+        return await _repository.GetPlayerSpecComparisonAsync(playerId, specName, useAverageDps, topCount, raidTypeId, cancellationToken);
     }
 }

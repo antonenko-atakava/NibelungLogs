@@ -150,6 +150,7 @@ public sealed class PlayersController : ControllerBase
         [FromQuery] string specName,
         [FromQuery] bool useAverageDps = true,
         [FromQuery] int topCount = 20,
+        [FromQuery] int? raidTypeId = null,
         CancellationToken cancellationToken = default)
     {
         if (id <= 0)
@@ -161,7 +162,7 @@ public sealed class PlayersController : ControllerBase
         if (topCount <= 0 || topCount > 100)
             return BadRequest("TopCount must be between 1 and 100");
 
-        var result = await _playerQueryService.GetPlayerSpecComparisonAsync(id, specName, useAverageDps, topCount, cancellationToken);
+        var result = await _playerQueryService.GetPlayerSpecComparisonAsync(id, specName, useAverageDps, topCount, raidTypeId, cancellationToken);
 
         if (result == null)
             return NotFound();

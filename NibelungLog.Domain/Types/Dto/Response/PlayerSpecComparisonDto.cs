@@ -16,4 +16,6 @@ public sealed class PlayerSpecComparisonItemDto
     public required string CharacterName { get; set; }
     public double Value { get; set; }
     public bool IsCurrentPlayer { get; set; }
+    public int Rank { get; set; }
+    public string? ClassName { get; set; }
 }

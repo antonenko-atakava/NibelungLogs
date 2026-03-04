@@ -171,12 +171,14 @@ class PlayersApi implements IPlayersApi {
     }
   }
 
-  async getPlayerSpecComparison(playerId: number, specName: string, useAverageDps: boolean, topCount: number = 20): Promise<PlayerSpecComparisonDto | null> {
+  async getPlayerSpecComparison(playerId: number, specName: string, useAverageDps: boolean, topCount: number = 20, raidTypeId?: number | null): Promise<PlayerSpecComparisonDto | null> {
     try {
       const searchParams = new URLSearchParams();
       searchParams.append("specName", specName);
       searchParams.append("useAverageDps", useAverageDps.toString());
       searchParams.append("topCount", topCount.toString());
+      if (raidTypeId !== undefined && raidTypeId !== null)
+        searchParams.append("raidTypeId", raidTypeId.toString());
 
       const response = await fetch(`${this.baseUrl}/api/players/${playerId}/spec-comparison?${searchParams.toString()}`);
       

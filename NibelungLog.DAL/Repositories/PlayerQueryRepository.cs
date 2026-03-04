@@ -760,6 +760,7 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         string specName,
         bool useAverageDps,
         int topCount,
+        int? raidTypeId = null,
         CancellationToken cancellationToken = default)
     {
         var player = await _context.Players
@@ -768,15 +769,33 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         if (player == null)
             return null;
 
-        var playerEncounters = await _context.PlayerEncounters
+        var playerEncountersQuery = _context.PlayerEncounters
             .Include(pe => pe.CharacterSpec)
             .Include(pe => pe.Encounter)
+                .ThenInclude(e => e.Raid)
+                    .ThenInclude(r => r.RaidType)
             .Include(pe => pe.Player)
-            .Where(pe => pe.CharacterSpec.Name == specName && pe.Encounter.Success == true && pe.Encounter.EncounterEntry != "33113")
-            .ToListAsync(cancellationToken);
+            .Where(pe => pe.CharacterSpec.Name == specName 
+                && pe.Player.CharacterClass == player.CharacterClass 
+                && pe.Encounter.Success == true 
+                && pe.Encounter.EncounterEntry != "33113");
+
+        if (raidTypeId.HasValue)
+        {
+            playerEncountersQuery = playerEncountersQuery.Where(pe => pe.Encounter.Raid.RaidTypeId == raidTypeId.Value);
+        }
+
+        var playerEncounters = await playerEncountersQuery.ToListAsync(cancellationToken);
 
         if (playerEncounters.Count == 0)
             return null;
+
+        var isHealerSpec = playerEncounters.Any(pe => pe.Role == "2");
+        
+        if (isHealerSpec)
+        {
+            playerEncounters = playerEncounters.Where(pe => pe.Role == "2").ToList();
+        }
 
         var playerStats = playerEncounters
             .GroupBy(pe => pe.PlayerId)
@@ -784,57 +803,145 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             {
                 PlayerId = g.Key,
                 CharacterName = g.First().Player.CharacterName,
+                ClassName = g.First().Player.ClassName,
                 AverageDps = g.Average(pe => pe.Dps),
                 MaxDps = g.Max(pe => pe.Dps),
+                AverageHps = isHealerSpec && g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime).Any()
+                    ? g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime)
+                        .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                        .Average()
+                    : 0.0,
+                MaxHps = isHealerSpec && g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime).Any()
+                    ? g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime)
+                        .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                        .Max()
+                    : 0.0,
                 IsCurrentPlayer = g.Key == playerId
             })
-            .OrderByDescending(s => useAverageDps ? s.AverageDps : s.MaxDps)
+            .OrderByDescending(s => isHealerSpec 
+                ? (useAverageDps ? s.AverageHps : s.MaxHps)
+                : (useAverageDps ? s.AverageDps : s.MaxDps))
+            .Select((s, index) => new
+            {
+                s.PlayerId,
+                s.CharacterName,
+                s.ClassName,
+                s.AverageDps,
+                s.MaxDps,
+                s.AverageHps,
+                s.MaxHps,
+                s.IsCurrentPlayer,
+                Rank = index + 1
+            })
             .ToList();
 
         var currentPlayerStat = playerStats.FirstOrDefault(s => s.IsCurrentPlayer);
         if (currentPlayerStat == null)
             return null;
 
-        var currentPlayerRank = playerStats.IndexOf(currentPlayerStat) + 1;
-        var currentPlayerValue = useAverageDps ? currentPlayerStat.AverageDps : currentPlayerStat.MaxDps;
+        var currentPlayerRank = currentPlayerStat.Rank;
+        var currentPlayerValue = isHealerSpec
+            ? (useAverageDps ? currentPlayerStat.AverageHps : currentPlayerStat.MaxHps)
+            : (useAverageDps ? currentPlayerStat.AverageDps : currentPlayerStat.MaxDps);
+        var totalPlayers = playerStats.Count;
 
-        var topPlayers = playerStats
-            .Take(topCount)
-            .Select((s, index) => new PlayerSpecComparisonItemDto
+        const int playersAbove = 9;
+        const int playersBelow = 8;
+        const int totalResultPlayers = 20;
+
+        var topPlayer = playerStats.First();
+        var topPlayerId = topPlayer.PlayerId;
+
+        var resultPlayers = new List<PlayerSpecComparisonItemDto>();
+
+        var topPlayerItem = new PlayerSpecComparisonItemDto
+        {
+            PlayerId = topPlayer.PlayerId,
+            CharacterName = topPlayer.CharacterName,
+            Value = isHealerSpec
+                ? (useAverageDps ? topPlayer.AverageHps : topPlayer.MaxHps)
+                : (useAverageDps ? topPlayer.AverageDps : topPlayer.MaxDps),
+            IsCurrentPlayer = topPlayer.IsCurrentPlayer,
+            Rank = 1,
+            ClassName = topPlayer.ClassName
+        };
+        resultPlayers.Add(topPlayerItem);
+
+        var isTopPlayerCurrent = topPlayer.IsCurrentPlayer;
+        var playersAboveCount = currentPlayerRank - 1;
+        var playersBelowCount = totalPlayers - currentPlayerRank;
+
+        var startIndex = 0;
+        var endIndex = totalPlayers - 1;
+
+        if (playersBelowCount < playersBelow)
+        {
+            var neededAbove = playersBelow - playersBelowCount;
+            startIndex = Math.Max(1, currentPlayerRank - 1 - playersAbove - neededAbove);
+        }
+        else
+        {
+            startIndex = Math.Max(1, currentPlayerRank - 1 - playersAbove);
+        }
+
+        endIndex = Math.Min(totalPlayers - 1, startIndex + playersAbove + 1 + playersBelow);
+
+        var contextPlayers = playerStats
+            .Skip(startIndex)
+            .Take(endIndex - startIndex + 1)
+            .Where(s => s.PlayerId != topPlayerId)
+            .ToList();
+
+        var playersToAdd = totalResultPlayers - 1;
+        
+        if (!isTopPlayerCurrent && !contextPlayers.Any(cp => cp.IsCurrentPlayer))
+        {
+            var currentPlayerInStats = playerStats.FirstOrDefault(s => s.IsCurrentPlayer);
+            if (currentPlayerInStats != null)
+            {
+                contextPlayers.Add(currentPlayerInStats);
+            }
+        }
+
+        if (contextPlayers.Count < playersToAdd)
+        {
+            var additionalPlayers = playerStats
+                .Where(s => s.PlayerId != topPlayerId && !contextPlayers.Any(cp => cp.PlayerId == s.PlayerId))
+                .Take(playersToAdd - contextPlayers.Count)
+                .ToList();
+            
+            contextPlayers = contextPlayers
+                .Concat(additionalPlayers)
+                .OrderByDescending(s => isHealerSpec
+                    ? (useAverageDps ? s.AverageHps : s.MaxHps)
+                    : (useAverageDps ? s.AverageDps : s.MaxDps))
+                .ToList();
+        }
+
+        contextPlayers = contextPlayers
+            .Take(playersToAdd)
+            .ToList();
+
+        var contextPlayersDto = contextPlayers
+            .Select(s => new PlayerSpecComparisonItemDto
             {
                 PlayerId = s.PlayerId,
                 CharacterName = s.CharacterName,
-                Value = useAverageDps ? s.AverageDps : s.MaxDps,
-                IsCurrentPlayer = s.IsCurrentPlayer
+                Value = isHealerSpec
+                    ? (useAverageDps ? s.AverageHps : s.MaxHps)
+                    : (useAverageDps ? s.AverageDps : s.MaxDps),
+                IsCurrentPlayer = s.IsCurrentPlayer,
+                Rank = s.Rank,
+                ClassName = s.ClassName
             })
             .ToList();
 
-        if (!topPlayers.Any(p => p.IsCurrentPlayer))
-        {
-            var currentPlayerItem = new PlayerSpecComparisonItemDto
-            {
-                PlayerId = currentPlayerStat.PlayerId,
-                CharacterName = currentPlayerStat.CharacterName,
-                Value = currentPlayerValue,
-                IsCurrentPlayer = true
-            };
-
-            var insertIndex = topPlayers.Count;
-            for (var i = 0; i < topPlayers.Count; i++)
-            {
-                if (topPlayers[i].Value < currentPlayerValue)
-                {
-                    insertIndex = i;
-                    break;
-                }
-            }
-            topPlayers.Insert(insertIndex, currentPlayerItem);
-        }
+        resultPlayers.AddRange(contextPlayersDto);
 
         return new PlayerSpecComparisonDto
         {
             SpecName = specName,
-            Players = topPlayers,
+            Players = resultPlayers,
             CurrentPlayerRank = currentPlayerRank,
             CurrentPlayerId = playerId,
             CurrentPlayerName = player.CharacterName,

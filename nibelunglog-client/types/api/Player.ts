@@ -132,6 +132,8 @@ export interface PlayerSpecComparisonItemDto {
   characterName: string;
   value: number;
   isCurrentPlayer: boolean;
+  rank: number;
+  className: string | null;
 }
 
 export interface PagedResult<T> {

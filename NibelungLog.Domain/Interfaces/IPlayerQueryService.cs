@@ -66,5 +66,6 @@ public interface IPlayerQueryService
         string specName,
         bool useAverageDps,
         int topCount,
+        int? raidTypeId = null,
         CancellationToken cancellationToken = default);
 }

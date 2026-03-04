@@ -12,7 +12,7 @@ export interface IPlayersApi {
   getPlayerEncounters(params: GetPlayerEncountersParams): Promise<PagedResult<PlayerEncounterDetailDto>>;
   getPlayerEncounterTimeline(playerId: number, encounterEntry: string): Promise<PlayerEncounterTimelineDto[]>;
   getPlayerUniqueEncounters(playerId: number): Promise<EncounterListItemDto[]>;
-  getPlayerSpecComparison(playerId: number, specName: string, useAverageDps: boolean, topCount?: number): Promise<PlayerSpecComparisonDto | null>;
+  getPlayerSpecComparison(playerId: number, specName: string, useAverageDps: boolean, topCount?: number, raidTypeId?: number | null): Promise<PlayerSpecComparisonDto | null>;
 }
 
 export interface GetPlayersParams {
