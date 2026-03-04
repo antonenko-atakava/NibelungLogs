@@ -80,7 +80,19 @@ export default function PlayerDetailPage() {
     );
 
   if (!player)
-    return null;
+    return (
+      <div className="container mx-auto py-12 px-8 max-w-7xl">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/players")}
+          className="mb-6"
+        >
+          <ArrowLeft className="mr-2 size-4" />
+          Назад к списку игроков
+        </Button>
+        <ErrorMessage message="Игрок не найден" onRetry={() => window.location.reload()} />
+      </div>
+    );
 
   return (
     <div className="container mx-auto py-12 px-8 max-w-7xl">
