@@ -401,7 +401,7 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
     {
         var allRaids = new List<RaidRecord>();
         var page = 1;
-        const int limit = 25;
+        const int limit = 100;
         var hasMoreData = true;
 
         while (hasMoreData)
@@ -506,7 +506,7 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
     {
         var allEncounters = new List<EncounterRecord>();
         var page = 1;
-        const int limit = 25;
+        const int limit = 100;
         var hasMoreData = true;
 
         var requestUri = $"/main.php?1&serverId={serverId}";
@@ -537,7 +537,7 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
 
             HttpResponseMessage? response = null;
             var retryCount = 0;
-            const int maxRetries = 3;
+            const int maxRetries = 5;
 
             while (retryCount < maxRetries)
             {
@@ -552,6 +552,28 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
                     currentRequest.Headers.Add("X-Requested-With", "XMLHttpRequest");
 
                     response = await _httpClient.SendAsync(currentRequest, cancellationToken);
+
+                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                        response.Dispose();
+                        response = null;
+
+                        if (retryCount < maxRetries - 1)
+                        {
+                            retryCount++;
+                            var delay = TimeSpan.FromSeconds(60);
+                            _logger.LogWarning("503 Service Unavailable - Rate limit reached. Waiting {Delay}s before retry (attempt {Attempt}/{MaxRetries})", delay.TotalSeconds, retryCount, maxRetries);
+                            await Task.Delay(delay, cancellationToken);
+                            continue;
+                        }
+                        else
+                        {
+                            _logger.LogError("503 Service Unavailable after {MaxRetries} attempts: {Content}", maxRetries, errorContent);
+                            throw new HttpRequestException($"Rate limit reached after {maxRetries} attempts");
+                        }
+                    }
+
                     break;
                 }
                 catch (HttpRequestException ex) when (retryCount < maxRetries - 1)
@@ -571,6 +593,13 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    
+                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                    {
+                        _logger.LogError("503 Service Unavailable after all retries: {Content}", errorContent);
+                        throw new HttpRequestException($"Rate limit reached after {maxRetries} attempts");
+                    }
+                    
                     _logger.LogError("Get raid details failed with status {StatusCode}: {Content}", response.StatusCode, errorContent);
                     response.EnsureSuccessStatusCode();
                 }
@@ -731,7 +760,7 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
     {
         var allPlayers = new List<PlayerEncounterRecord>();
         var page = 1;
-        const int limit = 25;
+        const int limit = 100;
         var hasMoreData = true;
 
         while (hasMoreData)
@@ -762,7 +791,7 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
             var requestUri = $"/main.php?1&serverId={serverId}";
 
             HttpResponseMessage? response = null;
-            const int maxRetries = 3;
+            const int maxRetries = 5;
             var retryCount = 0;
 
             while (retryCount < maxRetries)
@@ -779,6 +808,28 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
                     requestMessage.Headers.Add("X-Requested-With", "XMLHttpRequest");
 
                     response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+
+                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                        response.Dispose();
+                        response = null;
+
+                        if (retryCount < maxRetries - 1)
+                        {
+                            retryCount++;
+                            var delay = TimeSpan.FromSeconds(60);
+                            _logger.LogWarning("503 Service Unavailable - Rate limit reached. Waiting {Delay}s before retry (attempt {Attempt}/{MaxRetries})", delay.TotalSeconds, retryCount, maxRetries);
+                            await Task.Delay(delay, cancellationToken);
+                            continue;
+                        }
+                        else
+                        {
+                            _logger.LogError("503 Service Unavailable after {MaxRetries} attempts: {Content}", maxRetries, errorContent);
+                            throw new HttpRequestException($"Rate limit reached after {maxRetries} attempts");
+                        }
+                    }
+
                     break;
                 }
                 catch (HttpRequestException ex) when (retryCount < maxRetries - 1)
@@ -798,6 +849,13 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    
+                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                    {
+                        _logger.LogError("503 Service Unavailable after all retries: {Content}", errorContent);
+                        throw new HttpRequestException($"Rate limit reached after {maxRetries} attempts");
+                    }
+                    
                     _logger.LogError("Get encounter players failed with status {StatusCode}: {Content}", response.StatusCode, errorContent);
                     response.EnsureSuccessStatusCode();
                 }
