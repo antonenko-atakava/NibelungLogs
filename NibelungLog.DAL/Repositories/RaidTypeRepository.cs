@@ -14,6 +14,13 @@ public sealed class RaidTypeRepository : IRaidTypeRepository
         _context = context;
     }
 
+    public async Task<List<RaidType>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.RaidTypes
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<RaidType?> FindByMapDifficultyInstanceTypeAsync(string map, string difficulty, string instanceType, CancellationToken cancellationToken = default)
     {
         return await _context.RaidTypes
@@ -52,5 +59,11 @@ public sealed class RaidTypeRepository : IRaidTypeRepository
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task ClearChangeTrackerAsync(CancellationToken cancellationToken = default)
+    {
+        _context.ChangeTracker.Clear();
+        await Task.CompletedTask;
     }
 }

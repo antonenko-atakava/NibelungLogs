@@ -1,10 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NibelungLog.Domain.Entities;
 using NibelungLog.Domain.Interfaces;
 using NibelungLog.Domain.Interfaces.Repositories;
 using NibelungLog.Domain.Types;
 using NibelungLog.Domain.Types.Dto;
-using NibelungLog.Domain.Types.Encounters;
+using Npgsql;
 
 namespace NibelungLog.Service.Services;
 
@@ -42,42 +43,31 @@ public sealed class RaidDataService : IRaidDataService
         var characterSpecsDict = new Dictionary<(string Class, string Spec), CharacterSpec>();
         var raidTypesDict = new Dictionary<(string Map, string Difficulty, string InstanceType), RaidType>();
         var savedRaidsDict = new Dictionary<string, Raid>();
-        var savedEncountersDict = new Dictionary<(string RaidId, string EncounterEntry, string StartTime), Encounter>();
+        var savedEncountersDict = new Dictionary<(int RaidId, string EncounterEntry, DateTime StartTime), Encounter>();
 
-        var characterGuids = playerEncounters
-            .Select(p => p.CharacterGuid)
-            .Distinct()
-            .ToList();
-
+        var characterGuids = playerEncounters.Select(pe => pe.CharacterGuid).Distinct().ToList();
         var existingPlayers = await _playerRepository.GetByCharacterGuidsAsync(characterGuids, cancellationToken);
+        
         foreach (var player in existingPlayers)
             playersDict[player.CharacterGuid] = player;
 
         var newPlayers = new List<Player>();
-        var playersToUpdate = new List<Player>();
-
         foreach (var playerEncounter in playerEncounters)
         {
             if (!playersDict.ContainsKey(playerEncounter.CharacterGuid))
             {
                 var player = new Player
-                    {
-                        CharacterGuid = playerEncounter.CharacterGuid,
-                        CharacterName = playerEncounter.CharacterName,
-                        CharacterRace = playerEncounter.CharacterRace,
-                        CharacterClass = playerEncounter.CharacterClass,
-                        ClassName = ClassMappings.GetClassName(playerEncounter.CharacterClass),
-                        CharacterGender = playerEncounter.CharacterGender,
-                        CharacterLevel = playerEncounter.CharacterLevel
-                    };
+                {
+                    CharacterGuid = playerEncounter.CharacterGuid,
+                    CharacterName = playerEncounter.CharacterName,
+                    CharacterRace = playerEncounter.CharacterRace,
+                    CharacterClass = playerEncounter.CharacterClass,
+                    ClassName = ClassMappings.GetClassName(playerEncounter.CharacterClass),
+                    CharacterGender = playerEncounter.CharacterGender,
+                    CharacterLevel = playerEncounter.CharacterLevel
+                };
                 newPlayers.Add(player);
                 playersDict[playerEncounter.CharacterGuid] = player;
-            }
-            else if (string.IsNullOrEmpty(playersDict[playerEncounter.CharacterGuid].ClassName))
-            {
-                var player = playersDict[playerEncounter.CharacterGuid];
-                player.ClassName = ClassMappings.GetClassName(player.CharacterClass);
-                playersToUpdate.Add(player);
             }
         }
 
@@ -86,69 +76,63 @@ public sealed class RaidDataService : IRaidDataService
         {
             await _playerRepository.AddRangeAsync(newPlayers, cancellationToken);
             await _playerRepository.SaveChangesAsync(cancellationToken);
-            
-            foreach (var player in newPlayers)
-            {
-                if (player.Id > 0 && playersDict.ContainsKey(player.CharacterGuid))
-                {
-                    playersDict[player.CharacterGuid] = player;
-                }
-            }
         }
 
-        if (playersToUpdate.Count > 0)
-            await _playerRepository.UpdateRangeAsync(playersToUpdate, cancellationToken);
-
         newPlayers.Clear();
-        playersToUpdate.Clear();
-        characterGuids.Clear();
 
-        var specsKeys = playerEncounters
-            .Select(p => (p.CharacterClass, p.CharacterSpec))
+        var characterSpecs = playerEncounters
+            .Select(pe => (pe.CharacterClass, pe.CharacterSpec))
             .Distinct()
             .ToList();
 
-        var existingSpecs = await _characterSpecRepository.GetByClassAndSpecAsync(specsKeys, cancellationToken);
+        var existingSpecs = await _characterSpecRepository.GetByClassAndSpecAsync(characterSpecs, cancellationToken);
+        
         foreach (var spec in existingSpecs)
             characterSpecsDict[(spec.CharacterClass, spec.Spec)] = spec;
 
         var newSpecs = new List<CharacterSpec>();
-        var specsToUpdate = new List<CharacterSpec>();
-
-        foreach (var specKey in specsKeys)
+        foreach (var (characterClass, spec) in characterSpecs)
         {
-            if (!characterSpecsDict.ContainsKey(specKey))
+            if (!characterSpecsDict.ContainsKey((characterClass, spec)))
             {
-                var spec = new CharacterSpec
-                    {
-                    CharacterClass = specKey.CharacterClass,
-                    Spec = specKey.CharacterSpec,
-                    Name = ClassMappings.GetSpecName(specKey.CharacterClass, specKey.CharacterSpec)
-                    };
-                newSpecs.Add(spec);
-                characterSpecsDict[specKey] = spec;
-            }
-            else if (string.IsNullOrEmpty(characterSpecsDict[specKey].Name))
-            {
-                var spec = characterSpecsDict[specKey];
-                spec.Name = ClassMappings.GetSpecName(spec.CharacterClass, spec.Spec);
-                specsToUpdate.Add(spec);
+                var characterSpec = new CharacterSpec
+                {
+                    CharacterClass = characterClass,
+                    Spec = spec,
+                    Name = ClassMappings.GetSpecName(characterClass, spec)
+                };
+                newSpecs.Add(characterSpec);
+                characterSpecsDict[(characterClass, spec)] = characterSpec;
             }
         }
 
         var hasNewSpecs = newSpecs.Count > 0;
         if (hasNewSpecs)
         {
-            await _characterSpecRepository.AddRangeAsync(newSpecs, cancellationToken);
-            await _characterSpecRepository.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _characterSpecRepository.AddRangeAsync(newSpecs, cancellationToken);
+                await _characterSpecRepository.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "23505")
+            {
+                _logger.LogWarning("Duplicate CharacterSpec detected, clearing context and reloading from database");
+                await _characterSpecRepository.ClearChangeTrackerAsync(cancellationToken);
+                
+                foreach (var newSpec in newSpecs)
+                {
+                    var existingSpec = await _characterSpecRepository.FindByClassAndSpecAsync(
+                        newSpec.CharacterClass, 
+                        newSpec.Spec, 
+                        cancellationToken);
+                    
+                    if (existingSpec != null)
+                        characterSpecsDict[(existingSpec.CharacterClass, existingSpec.Spec)] = existingSpec;
+                }
+            }
         }
 
-        if (specsToUpdate.Count > 0)
-            await _characterSpecRepository.UpdateRangeAsync(specsToUpdate, cancellationToken);
-
         newSpecs.Clear();
-        specsToUpdate.Clear();
-        specsKeys.Clear();
 
         var raidTypeKeys = raids
             .Select(r => (r.Map, r.Difficulty, r.InstanceType))
@@ -156,48 +140,41 @@ public sealed class RaidDataService : IRaidDataService
             .ToList();
 
         var existingRaidTypes = await _raidTypeRepository.GetByMapDifficultyInstanceTypeAsync(raidTypeKeys, cancellationToken);
+        
         foreach (var raidType in existingRaidTypes)
             raidTypesDict[(raidType.Map, raidType.Difficulty, raidType.InstanceType)] = raidType;
 
-        var newRaidTypes = new List<RaidType>();
-        foreach (var raidTypeKey in raidTypeKeys)
-        {
-            if (!raidTypesDict.ContainsKey(raidTypeKey))
-            {
-                var displayName = RaidMappings.GetRaidDisplayName(raidTypeKey.Map, raidTypeKey.Difficulty, raidTypeKey.InstanceType);
-                var raidType = new RaidType
-                    {
-                        Name = displayName,
-                    Map = raidTypeKey.Map,
-                    Difficulty = raidTypeKey.Difficulty,
-                    InstanceType = raidTypeKey.InstanceType
-                    };
-                newRaidTypes.Add(raidType);
-                raidTypesDict[raidTypeKey] = raidType;
-            }
-        }
+        var missingRaidTypes = raidTypeKeys
+            .Where(key => !raidTypesDict.ContainsKey(key))
+            .ToList();
 
-        var hasNewRaidTypes = newRaidTypes.Count > 0;
-        if (hasNewRaidTypes)
+        if (missingRaidTypes.Count > 0)
         {
-            await _raidTypeRepository.AddRangeAsync(newRaidTypes, cancellationToken);
-            await _raidTypeRepository.SaveChangesAsync(cancellationToken);
+            _logger.LogWarning("Skipping {Count} raids with missing RaidTypes: {MissingTypes}",
+                missingRaidTypes.Count,
+                string.Join(", ", missingRaidTypes.Select(k => $"{k.Map}-{k.Difficulty}-{k.InstanceType}")));
         }
-
-        newRaidTypes.Clear();
-        raidTypeKeys.Clear();
 
         var raidIds = raids.Select(r => r.Id).Distinct().ToList();
         var existingRaids = await _raidRepository.GetByRaidIdsAsync(raidIds, cancellationToken);
+        
         foreach (var raid in existingRaids)
             savedRaidsDict[raid.RaidId] = raid;
 
         var newRaids = new List<Raid>();
         foreach (var raid in raids)
-            {
+        {
             if (!savedRaidsDict.ContainsKey(raid.Id))
             {
                 var raidTypeKey = (raid.Map, raid.Difficulty, raid.InstanceType);
+                
+                if (!raidTypesDict.ContainsKey(raidTypeKey))
+                {
+                    _logger.LogWarning("Skipping raid {RaidId}: RaidType not found (Map={Map}, Difficulty={Difficulty}, InstanceType={InstanceType})",
+                        raid.Id, raid.Map, raid.Difficulty, raid.InstanceType);
+                    continue;
+                }
+                
                 var savedRaid = new Raid
                 {
                     RaidId = raid.Id,
@@ -241,24 +218,9 @@ public sealed class RaidDataService : IRaidDataService
             .ToList();
 
         var existingEncounters = await _encounterRepository.GetByRaidIdEncounterEntryStartTimeAsync(encounterKeys, cancellationToken);
-        var encounterLookup = existingEncounters.ToLookup(e => (e.RaidId, e.EncounterEntry, e.StartTime));
         
-        foreach (var encounter in encounters)
-        {
-            if (!savedRaidsDict.ContainsKey(encounter.LogInstanceId))
-                continue;
-
-            var startTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(encounter.StartTime)).UtcDateTime;
-            var raidId = savedRaidsDict[encounter.LogInstanceId].Id;
-            var lookupKey = (raidId, encounter.EncounterEntry, startTime);
-            
-            var existingEncounter = encounterLookup[lookupKey].FirstOrDefault();
-            if (existingEncounter != null)
-            {
-                var encounterKey = (encounter.LogInstanceId, encounter.EncounterEntry, encounter.StartTime);
-                savedEncountersDict[encounterKey] = existingEncounter;
-        }
-        }
+        foreach (var encounter in existingEncounters)
+            savedEncountersDict[(encounter.RaidId, encounter.EncounterEntry, encounter.StartTime)] = encounter;
 
         var newEncounters = new List<Encounter>();
         foreach (var encounter in encounters)
@@ -266,37 +228,27 @@ public sealed class RaidDataService : IRaidDataService
             if (!savedRaidsDict.ContainsKey(encounter.LogInstanceId))
                 continue;
 
-            var encounterKey = (encounter.LogInstanceId, encounter.EncounterEntry, encounter.StartTime);
+            var raid = savedRaidsDict[encounter.LogInstanceId];
+            var startTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(encounter.StartTime)).UtcDateTime;
+            var encounterKey = (raid.Id, encounter.EncounterEntry, startTime);
+
             if (!savedEncountersDict.ContainsKey(encounterKey))
             {
-                var startTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(encounter.StartTime)).UtcDateTime;
-                    var raidRecord = raids.FirstOrDefault(r => r.Id == encounter.LogInstanceId);
-                    var map = raidRecord?.Map ?? "533";
-                    
-                    var encounterName = map switch
-                    {
-                        "533" => NaxxramasEncounter.Names.TryGetValue(encounter.EncounterEntry, out var naxxName) ? naxxName : null,
-                        "616" => EyeOfEternityEncounter.Names.TryGetValue(encounter.EncounterEntry, out var eyeName) ? eyeName : null,
-                        "615" => ObsidianSanctumEncounter.Names.TryGetValue(encounter.EncounterEntry, out var obsName) ? obsName : null,
-                        "603" => UlduarEncounter.Names.TryGetValue(encounter.EncounterEntry, out var ulduarName) ? ulduarName : null,
-                        _ => null
-                    };
-                    
                 var savedEncounter = new Encounter
-                    {
-                        RaidId = savedRaidsDict[encounter.LogInstanceId].Id,
-                        EncounterEntry = encounter.EncounterEntry,
-                        EncounterName = encounterName,
-                        StartTime = startTime,
-                        EndTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(encounter.EndTime)).UtcDateTime,
-                        Success = encounter.Success == "1",
-                        TotalDamage = long.Parse(encounter.TotalDamage),
-                        TotalHealing = long.Parse(encounter.TotalHealing),
-                        Tanks = int.Parse(encounter.Tanks),
-                        Healers = int.Parse(encounter.Healers),
-                        DamageDealers = int.Parse(encounter.DamageDealers),
-                        AverageGearScore = encounter.AverageGearScore
-                    };
+                {
+                    RaidId = raid.Id,
+                    EncounterEntry = encounter.EncounterEntry,
+                    EncounterName = encounter.EncounterName,
+                    StartTime = startTime,
+                    EndTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(encounter.EndTime)).UtcDateTime,
+                    Success = encounter.Success == "1",
+                    TotalDamage = long.Parse(encounter.TotalDamage),
+                    TotalHealing = long.Parse(encounter.TotalHealing),
+                    Tanks = int.Parse(encounter.Tanks),
+                    Healers = int.Parse(encounter.Healers),
+                    DamageDealers = int.Parse(encounter.DamageDealers),
+                    AverageGearScore = encounter.AverageGearScore
+                };
                 newEncounters.Add(savedEncounter);
                 savedEncountersDict[encounterKey] = savedEncounter;
             }
@@ -313,9 +265,17 @@ public sealed class RaidDataService : IRaidDataService
         encounterKeys.Clear();
 
         var playerEncounterKeys = playerEncounters
-            .Where(pe => savedEncountersDict.ContainsKey((pe.LogInstanceId, pe.EncounterEntry, pe.StartTime)))
+            .Where(pe => savedEncountersDict.ContainsKey((
+                savedRaidsDict[pe.LogInstanceId].Id,
+                pe.EncounterEntry,
+                DateTimeOffset.FromUnixTimeSeconds(long.Parse(pe.StartTime)).UtcDateTime
+            )))
             .Select(pe => {
-                var encounter = savedEncountersDict[(pe.LogInstanceId, pe.EncounterEntry, pe.StartTime)];
+                var encounter = savedEncountersDict[(
+                    savedRaidsDict[pe.LogInstanceId].Id,
+                    pe.EncounterEntry,
+                    DateTimeOffset.FromUnixTimeSeconds(long.Parse(pe.StartTime)).UtcDateTime
+                )];
                 var player = playersDict[pe.CharacterGuid];
                 return (player.Id, encounter.Id);
             })
@@ -330,33 +290,43 @@ public sealed class RaidDataService : IRaidDataService
         var newPlayerEncounters = new List<PlayerEncounter>();
         foreach (var playerEncounter in playerEncounters)
         {
-            if (!savedEncountersDict.ContainsKey((playerEncounter.LogInstanceId, playerEncounter.EncounterEntry, playerEncounter.StartTime)))
+            if (!savedRaidsDict.ContainsKey(playerEncounter.LogInstanceId))
                 continue;
 
-            var encounter = savedEncountersDict[(playerEncounter.LogInstanceId, playerEncounter.EncounterEntry, playerEncounter.StartTime)];
+            var raid = savedRaidsDict[playerEncounter.LogInstanceId];
+            var startTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(playerEncounter.StartTime)).UtcDateTime;
+            var encounterKey = (raid.Id, playerEncounter.EncounterEntry, startTime);
+
+            if (!savedEncountersDict.ContainsKey(encounterKey))
+                continue;
+
+            var encounter = savedEncountersDict[encounterKey];
             var player = playersDict[playerEncounter.CharacterGuid];
-            var spec = characterSpecsDict[(playerEncounter.CharacterClass, playerEncounter.CharacterSpec)];
+            var playerEncounterKey = (player.Id, encounter.Id);
 
-            if (existingPlayerEncounterSet.Contains((player.Id, encounter.Id)))
-                continue;
+            if (!existingPlayerEncounterSet.Contains(playerEncounterKey))
+            {
+                var characterSpec = characterSpecsDict[(playerEncounter.CharacterClass, playerEncounter.CharacterSpec)];
+                var fightDuration = (encounter.EndTime - encounter.StartTime).TotalSeconds;
+                var damageDone = long.Parse(playerEncounter.DamageDone);
+                var dps = fightDuration > 0 ? (double)damageDone / fightDuration : 0;
 
-            var encounterDuration = (encounter.EndTime - encounter.StartTime).TotalSeconds;
-            var dps = encounterDuration > 0 ? (double)long.Parse(playerEncounter.DamageDone) / encounterDuration : 0;
-
-            var savedPlayerEncounter = new PlayerEncounter
+                var savedPlayerEncounter = new PlayerEncounter
                 {
                     PlayerId = player.Id,
                     EncounterId = encounter.Id,
-                    CharacterSpecId = spec.Id,
+                    CharacterSpecId = characterSpec.Id,
                     Role = playerEncounter.CharacterRole,
-                    DamageDone = long.Parse(playerEncounter.DamageDone),
+                    DamageDone = damageDone,
                     HealingDone = long.Parse(playerEncounter.HealingDone),
                     AbsorbProvided = long.Parse(playerEncounter.AbsorbProvided),
                     Dps = dps,
                     MaxAverageGearScore = playerEncounter.MaxAverageGearScore,
                     MaxGearScore = playerEncounter.MaxGearScore
                 };
-            newPlayerEncounters.Add(savedPlayerEncounter);
+                newPlayerEncounters.Add(savedPlayerEncounter);
+                existingPlayerEncounterSet.Add(playerEncounterKey);
+            }
         }
 
         if (newPlayerEncounters.Count > 0)
@@ -373,10 +343,6 @@ public sealed class RaidDataService : IRaidDataService
         if (!hasNewSpecs)
         {
             await _characterSpecRepository.SaveChangesAsync(cancellationToken);
-        }
-        if (!hasNewRaidTypes)
-        {
-            await _raidTypeRepository.SaveChangesAsync(cancellationToken);
         }
         if (!hasNewRaids)
         {
@@ -395,6 +361,9 @@ public sealed class RaidDataService : IRaidDataService
         raidTypesDict.Clear();
         savedRaidsDict.Clear();
         savedEncountersDict.Clear();
+
+        _logger.LogInformation("Saved {RaidCount} raids, {EncounterCount} encounters, {PlayerEncounterCount} player encounters",
+            raids.Count, encounters.Count, playerEncounters.Count);
     }
 
     public async Task SaveSingleRaidDataAsync(RaidRecord raid, List<EncounterRecord> encounters, List<PlayerEncounterRecord> playerEncounters, CancellationToken cancellationToken = default)

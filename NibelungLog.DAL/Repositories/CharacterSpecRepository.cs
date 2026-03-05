@@ -63,4 +63,10 @@ public sealed class CharacterSpecRepository : ICharacterSpecRepository
     {
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task ClearChangeTrackerAsync(CancellationToken cancellationToken = default)
+    {
+        _context.ChangeTracker.Clear();
+        await Task.CompletedTask;
+    }
 }

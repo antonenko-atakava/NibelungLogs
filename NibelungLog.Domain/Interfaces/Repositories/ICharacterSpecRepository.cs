@@ -11,4 +11,5 @@ public interface ICharacterSpecRepository
     Task UpdateAsync(CharacterSpec characterSpec, CancellationToken cancellationToken = default);
     Task UpdateRangeAsync(List<CharacterSpec> characterSpecs, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task ClearChangeTrackerAsync(CancellationToken cancellationToken = default);
 }

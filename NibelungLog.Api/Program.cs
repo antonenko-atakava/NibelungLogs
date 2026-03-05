@@ -21,6 +21,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<GetPlayersQueryValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<GetGuildMembersQueryValidator>();
 
 var postgresConnectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") 
     ?? builder.Configuration.GetConnectionString("DefaultConnection")
@@ -40,11 +41,13 @@ builder.Services.AddScoped<IPlayerQueryRepository, PlayerQueryRepository>();
 builder.Services.AddScoped<IRaidQueryRepository, RaidQueryRepository>();
 builder.Services.AddScoped<IEncounterQueryRepository, EncounterQueryRepository>();
 builder.Services.AddScoped<IRaidTypeQueryRepository, RaidTypeQueryRepository>();
+builder.Services.AddScoped<IGuildQueryRepository, GuildQueryRepository>();
 
 builder.Services.AddScoped<IPlayerQueryService, PlayerQueryService>();
 builder.Services.AddScoped<IRaidQueryService, RaidQueryService>();
 builder.Services.AddScoped<IEncounterQueryService, EncounterQueryService>();
 builder.Services.AddScoped<IRaidTypeQueryService, RaidTypeQueryService>();
+builder.Services.AddScoped<IGuildQueryService, GuildQueryService>();
 
 builder.Services.AddCors(options =>
 {
