@@ -65,5 +65,34 @@ BEGIN
     VALUES ('20260105105709_AddGuildEntities', '9.0.0');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260306120000_AddGuildMetadataFields') THEN
+    ALTER TABLE "Guilds" ADD COLUMN IF NOT EXISTS "LeaderGuid" text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260306120000_AddGuildMetadataFields') THEN
+    ALTER TABLE "Guilds" ADD COLUMN IF NOT EXISTS "CreateDate" text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260306120000_AddGuildMetadataFields') THEN
+    ALTER TABLE "Guilds" ADD COLUMN IF NOT EXISTS "LeaderName" text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260306120000_AddGuildMetadataFields') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260306120000_AddGuildMetadataFields', '9.0.0');
+    END IF;
+END $EF$;
 COMMIT;
 

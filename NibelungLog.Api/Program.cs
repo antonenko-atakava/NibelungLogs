@@ -42,12 +42,14 @@ builder.Services.AddScoped<IRaidQueryRepository, RaidQueryRepository>();
 builder.Services.AddScoped<IEncounterQueryRepository, EncounterQueryRepository>();
 builder.Services.AddScoped<IRaidTypeQueryRepository, RaidTypeQueryRepository>();
 builder.Services.AddScoped<IGuildQueryRepository, GuildQueryRepository>();
+builder.Services.AddScoped<ISeasonStatisticsRepository, SeasonStatisticsRepository>();
 
 builder.Services.AddScoped<IPlayerQueryService, PlayerQueryService>();
 builder.Services.AddScoped<IRaidQueryService, RaidQueryService>();
 builder.Services.AddScoped<IEncounterQueryService, EncounterQueryService>();
 builder.Services.AddScoped<IRaidTypeQueryService, RaidTypeQueryService>();
 builder.Services.AddScoped<IGuildQueryService, GuildQueryService>();
+builder.Services.AddScoped<ISeasonStatisticsService, SeasonStatisticsService>();
 
 builder.Services.AddCors(options =>
 {

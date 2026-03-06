@@ -9,6 +9,9 @@ import { GuildMembersTable } from "@/components/guilds/detail/GuildMembersTable"
 import { GuildMemberFiltersModal } from "@/components/guilds/detail/GuildMemberFiltersModal";
 import { GuildStatisticsChart } from "@/components/guilds/detail/GuildStatisticsChart";
 import { GuildTopPlayersChart } from "@/components/guilds/detail/GuildTopPlayersChart";
+import { GuildProgressChart } from "@/components/guilds/detail/GuildProgressChart";
+import { GuildRaidStatistics } from "@/components/guilds/detail/GuildRaidStatistics";
+import { GuildBossStatistics } from "@/components/guilds/detail/GuildBossStatistics";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { ArrowLeft, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -122,11 +125,23 @@ export default function GuildDetailPage() {
       <GuildHeader guild={guild} />
 
       <div className="mt-8">
+        <GuildRaidStatistics guildId={guildId} />
+      </div>
+
+      <div className="mt-8">
         <GuildStatisticsChart guildId={guildId} />
       </div>
 
       <div className="mt-8">
         <GuildTopPlayersChart guildId={guildId} />
+      </div>
+
+      <div className="mt-8">
+        <GuildProgressChart guildId={guildId} />
+      </div>
+
+      <div className="mt-8">
+        <GuildBossStatistics guildId={guildId} />
       </div>
 
       <div className="mt-8">

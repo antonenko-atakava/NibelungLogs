@@ -70,6 +70,38 @@ export interface GuildRoleStatisticsDto {
   percentage: number;
 }
 
+export interface GuildProgressDto {
+  startTime: string;
+  raidTypeName: string;
+  wipes: number;
+  completedBosses: number;
+  totalBosses: number;
+  progressScore: number;
+}
+
+export interface GuildRaidStatisticsDto {
+  averageWipesPerRaid: number;
+  successRate: number;
+  averageRaidTimeMinutes: number;
+  totalDamage: number;
+  totalHealing: number;
+  averageGearScore: number;
+  maxGearScore: number;
+  totalSuccessfulEncounters: number;
+  totalFailedEncounters: number;
+  averageRaidSize: number;
+}
+
+export interface GuildBossStatisticsDto {
+  encounterName: string;
+  encounterEntry: string;
+  totalAttempts: number;
+  successfulAttempts: number;
+  successRate: number;
+  averageKillTimeSeconds: number;
+  totalKills: number;
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;

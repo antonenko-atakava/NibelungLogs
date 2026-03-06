@@ -28,7 +28,6 @@ public sealed class GuildDataService : IGuildDataService
 
     public async Task SaveGuildDataAsync(GuildInfoRecord guildInfo, List<GuildMemberRecord> members, CancellationToken cancellationToken = default)
     {
-
         var guild = await _guildRepository.FindByGuildIdAsync(guildInfo.GuildId, cancellationToken);
 
         if (guild == null)
@@ -37,6 +36,9 @@ public sealed class GuildDataService : IGuildDataService
             {
                 GuildId = guildInfo.GuildId,
                 GuildName = guildInfo.GuildName,
+                LeaderGuid = string.Empty,
+                CreateDate = string.Empty,
+                LeaderName = string.Empty,
                 LastUpdated = DateTime.UtcNow
             };
             await _guildRepository.AddAsync(guild, cancellationToken);
@@ -50,66 +52,8 @@ public sealed class GuildDataService : IGuildDataService
             _logger.LogInformation("Updated guild: {GuildName} ({GuildId})", guildInfo.GuildName, guildInfo.GuildId);
         }
 
-        var playersDict = new Dictionary<string, Player>();
-
-        foreach (var memberRecord in members)
-        {
-            if (!playersDict.ContainsKey(memberRecord.CharacterGuid))
-            {
-                var player = await _playerRepository.FindByCharacterGuidAsync(memberRecord.CharacterGuid, cancellationToken);
-
-                if (player == null)
-                {
-                    player = new Player
-                    {
-                        CharacterGuid = memberRecord.CharacterGuid,
-                        CharacterName = memberRecord.CharacterName,
-                        CharacterRace = memberRecord.CharacterRace,
-                        CharacterClass = memberRecord.CharacterClass,
-                        ClassName = ClassMappings.GetClassName(memberRecord.CharacterClass),
-                        CharacterGender = memberRecord.CharacterGender,
-                        CharacterLevel = memberRecord.CharacterLevel
-                    };
-                    await _playerRepository.AddAsync(player, cancellationToken);
-                    _logger.LogInformation("Created new player: {PlayerName} ({CharacterGuid})", memberRecord.CharacterName, memberRecord.CharacterGuid);
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(player.ClassName))
-                    {
-                        player.ClassName = ClassMappings.GetClassName(memberRecord.CharacterClass);
-                        await _playerRepository.UpdateAsync(player, cancellationToken);
-                    }
-                }
-
-                playersDict[memberRecord.CharacterGuid] = player;
-            }
-
-            var playerEntity = playersDict[memberRecord.CharacterGuid];
-
-            var guildMember = await _guildMemberRepository.FindByGuildIdAndPlayerIdAsync(guild.Id, playerEntity.Id, cancellationToken);
-
-            if (guildMember == null)
-            {
-                guildMember = new GuildMember
-                {
-                    GuildId = guild.Id,
-                    PlayerId = playerEntity.Id,
-                    Rank = memberRecord.Rank,
-                    JoinedDate = null,
-                    LastUpdated = DateTime.UtcNow
-                };
-                await _guildMemberRepository.AddAsync(guildMember, cancellationToken);
-                _logger.LogInformation("Added member to guild: {PlayerName} as {Rank}", memberRecord.CharacterName, memberRecord.Rank);
-            }
-            else
-            {
-                guildMember.Rank = memberRecord.Rank;
-                guildMember.LastUpdated = DateTime.UtcNow;
-                await _guildMemberRepository.UpdateAsync(guildMember, cancellationToken);
-                _logger.LogInformation("Updated member in guild: {PlayerName} as {Rank}", memberRecord.CharacterName, memberRecord.Rank);
-            }
-        }
+        var playersByCharacterGuid = await GetOrCreatePlayersAsync(members, cancellationToken);
+        await SaveGuildMembersAsync(guild, members, playersByCharacterGuid, true, cancellationToken);
 
         _logger.LogInformation("Saved {Count} members for guild {GuildName}", members.Count, guildInfo.GuildName);
     }
@@ -124,6 +68,9 @@ public sealed class GuildDataService : IGuildDataService
             {
                 GuildId = guildInfo.GuildId,
                 GuildName = guildInfo.GuildName,
+                LeaderGuid = string.Empty,
+                CreateDate = string.Empty,
+                LeaderName = string.Empty,
                 LastUpdated = DateTime.UtcNow
             };
             await _guildRepository.AddAsync(guild, cancellationToken);
@@ -141,63 +88,113 @@ public sealed class GuildDataService : IGuildDataService
         var guild = await _guildRepository.FindByGuildIdAsync(guildId, cancellationToken);
 
         if (guild == null)
+        {
             return;
+        }
 
-        var playersDict = new Dictionary<string, Player>();
+        var playersByCharacterGuid = await GetOrCreatePlayersAsync(members, cancellationToken);
+        await SaveGuildMembersAsync(guild, members, playersByCharacterGuid, false, cancellationToken);
+    }
+
+    private async Task<Dictionary<string, Player>> GetOrCreatePlayersAsync(
+        List<GuildMemberRecord> members,
+        CancellationToken cancellationToken)
+    {
+        var playersByCharacterGuid = new Dictionary<string, Player>();
+        var playersWereChanged = false;
 
         foreach (var memberRecord in members)
         {
-            if (!playersDict.ContainsKey(memberRecord.CharacterGuid))
+            if (playersByCharacterGuid.ContainsKey(memberRecord.CharacterGuid))
             {
-                var player = await _playerRepository.FindByCharacterGuidAsync(memberRecord.CharacterGuid, cancellationToken);
-
-                if (player == null)
-                {
-                    player = new Player
-                    {
-                        CharacterGuid = memberRecord.CharacterGuid,
-                        CharacterName = memberRecord.CharacterName,
-                        CharacterRace = memberRecord.CharacterRace,
-                        CharacterClass = memberRecord.CharacterClass,
-                        ClassName = ClassMappings.GetClassName(memberRecord.CharacterClass),
-                        CharacterGender = memberRecord.CharacterGender,
-                        CharacterLevel = memberRecord.CharacterLevel
-                    };
-                    await _playerRepository.AddAsync(player, cancellationToken);
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(player.ClassName))
-                    {
-                        player.ClassName = ClassMappings.GetClassName(memberRecord.CharacterClass);
-                        await _playerRepository.UpdateAsync(player, cancellationToken);
-                    }
-                }
-
-                playersDict[memberRecord.CharacterGuid] = player;
+                continue;
             }
 
-            var playerEntity = playersDict[memberRecord.CharacterGuid];
+            var player = await _playerRepository.FindByCharacterGuidAsync(memberRecord.CharacterGuid, cancellationToken);
 
-            var guildMember = await _guildMemberRepository.FindByGuildIdAndPlayerIdAsync(guild.Id, playerEntity.Id, cancellationToken);
+            if (player == null)
+            {
+                player = new Player
+                {
+                    CharacterGuid = memberRecord.CharacterGuid,
+                    CharacterName = memberRecord.CharacterName,
+                    CharacterRace = memberRecord.CharacterRace,
+                    CharacterClass = memberRecord.CharacterClass,
+                    ClassName = ClassMappings.GetClassName(memberRecord.CharacterClass),
+                    CharacterGender = memberRecord.CharacterGender,
+                    CharacterLevel = memberRecord.CharacterLevel
+                };
+                await _playerRepository.AddAsync(player, cancellationToken);
+                playersWereChanged = true;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(player.ClassName))
+                {
+                    player.ClassName = ClassMappings.GetClassName(memberRecord.CharacterClass);
+                    await _playerRepository.UpdateAsync(player, cancellationToken);
+                    playersWereChanged = true;
+                }
+            }
+
+            playersByCharacterGuid[memberRecord.CharacterGuid] = player;
+        }
+
+        if (playersWereChanged)
+        {
+            await _playerRepository.SaveChangesAsync(cancellationToken);
+            await _playerRepository.ClearChangeTrackerAsync(cancellationToken);
+        }
+
+        var characterGuids = playersByCharacterGuid.Keys.ToList();
+        var persistedPlayers = await _playerRepository.GetByCharacterGuidsAsync(characterGuids, cancellationToken);
+
+        return persistedPlayers.ToDictionary(player => player.CharacterGuid, player => player);
+    }
+
+    private async Task SaveGuildMembersAsync(
+        Guild guild,
+        List<GuildMemberRecord> members,
+        Dictionary<string, Player> playersByCharacterGuid,
+        bool writeLogs,
+        CancellationToken cancellationToken)
+    {
+        foreach (var memberRecord in members)
+        {
+            if (!playersByCharacterGuid.TryGetValue(memberRecord.CharacterGuid, out var player))
+            {
+                continue;
+            }
+
+            var guildMember = await _guildMemberRepository.FindByGuildIdAndPlayerIdAsync(guild.Id, player.Id, cancellationToken);
 
             if (guildMember == null)
             {
                 guildMember = new GuildMember
                 {
                     GuildId = guild.Id,
-                    PlayerId = playerEntity.Id,
+                    PlayerId = player.Id,
                     Rank = memberRecord.Rank,
                     JoinedDate = null,
                     LastUpdated = DateTime.UtcNow
                 };
                 await _guildMemberRepository.AddAsync(guildMember, cancellationToken);
+
+                if (writeLogs)
+                {
+                    _logger.LogInformation("Added member to guild: {PlayerName} as {Rank}", memberRecord.CharacterName, memberRecord.Rank);
+                }
             }
             else
             {
                 guildMember.Rank = memberRecord.Rank;
                 guildMember.LastUpdated = DateTime.UtcNow;
                 await _guildMemberRepository.UpdateAsync(guildMember, cancellationToken);
+
+                if (writeLogs)
+                {
+                    _logger.LogInformation("Updated member in guild: {PlayerName} as {Rank}", memberRecord.CharacterName, memberRecord.Rank);
+                }
             }
         }
     }

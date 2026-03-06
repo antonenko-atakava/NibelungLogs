@@ -1,7 +1,7 @@
 import { apiConfig } from "./config";
 import { ApiErrorHandler } from "./errorHandler";
 import type { IGuildsApi, GetGuildsParams, GetGuildMembersParams } from "@/interfaces/api/IGuildsApi";
-import type { PagedResult, GuildDto, GuildDetailDto, GuildMemberDto, GuildStatisticsDto } from "@/types/api/Guild";
+import type { PagedResult, GuildDto, GuildDetailDto, GuildMemberDto, GuildStatisticsDto, GuildProgressDto, GuildRaidStatisticsDto, GuildBossStatisticsDto } from "@/types/api/Guild";
 import type { EncounterListItemDto } from "@/types/api/Encounter";
 
 class GuildsApi implements IGuildsApi {
@@ -109,6 +109,39 @@ class GuildsApi implements IGuildsApi {
 
       const response = await fetch(`${this.baseUrl}/api/guilds/${guildId}/encounters?${searchParams.toString()}`);
       return ApiErrorHandler.handleResponse<EncounterListItemDto[]>(response);
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes("fetch"))
+        throw { message: "Ошибка подключения к серверу. Проверьте, что API сервер запущен." };
+      throw error;
+    }
+  }
+
+  async getGuildProgress(guildId: number): Promise<GuildProgressDto[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/guilds/${guildId}/progress`);
+      return ApiErrorHandler.handleResponse<GuildProgressDto[]>(response);
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes("fetch"))
+        throw { message: "Ошибка подключения к серверу. Проверьте, что API сервер запущен." };
+      throw error;
+    }
+  }
+
+  async getGuildRaidStatistics(guildId: number): Promise<GuildRaidStatisticsDto> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/guilds/${guildId}/raid-statistics`);
+      return ApiErrorHandler.handleResponse<GuildRaidStatisticsDto>(response);
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes("fetch"))
+        throw { message: "Ошибка подключения к серверу. Проверьте, что API сервер запущен." };
+      throw error;
+    }
+  }
+
+  async getGuildBossStatistics(guildId: number): Promise<GuildBossStatisticsDto[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/guilds/${guildId}/boss-statistics`);
+      return ApiErrorHandler.handleResponse<GuildBossStatisticsDto[]>(response);
     } catch (error) {
       if (error instanceof TypeError && error.message.includes("fetch"))
         throw { message: "Ошибка подключения к серверу. Проверьте, что API сервер запущен." };

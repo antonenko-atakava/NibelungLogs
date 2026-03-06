@@ -33,4 +33,10 @@ public interface IGuildQueryService
     Task<GuildStatisticsDto> GetGuildStatisticsAsync(int guildId, CancellationToken cancellationToken = default);
 
     Task<List<EncounterListItemDto>> GetGuildUniqueEncountersAsync(int guildId, int? raidTypeId, CancellationToken cancellationToken = default);
+
+    Task<List<GuildProgressDto>> GetGuildProgressAsync(int guildId, CancellationToken cancellationToken = default);
+
+    Task<GuildRaidStatisticsDto> GetGuildRaidStatisticsAsync(int guildId, CancellationToken cancellationToken = default);
+
+    Task<List<GuildBossStatisticsDto>> GetGuildBossStatisticsAsync(int guildId, CancellationToken cancellationToken = default);
 }

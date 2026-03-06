@@ -1,4 +1,4 @@
-import type { PagedResult, GuildDto, GuildDetailDto, GuildStatisticsDto } from "@/types/api/Guild";
+import type { PagedResult, GuildDto, GuildDetailDto, GuildStatisticsDto, GuildProgressDto, GuildRaidStatisticsDto, GuildBossStatisticsDto } from "@/types/api/Guild";
 import type { EncounterListItemDto } from "@/types/api/Encounter";
 
 export interface IGuildsApi {
@@ -6,6 +6,9 @@ export interface IGuildsApi {
   getGuildById(id: number): Promise<GuildDetailDto | null>;
   getGuildStatistics(id: number): Promise<GuildStatisticsDto>;
   getGuildUniqueEncounters(guildId: number, raidTypeId?: number | null): Promise<EncounterListItemDto[]>;
+  getGuildProgress(guildId: number): Promise<GuildProgressDto[]>;
+  getGuildRaidStatistics(guildId: number): Promise<GuildRaidStatisticsDto>;
+  getGuildBossStatistics(guildId: number): Promise<GuildBossStatisticsDto[]>;
 }
 
 export interface GetGuildsParams {

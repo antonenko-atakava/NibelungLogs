@@ -77,4 +77,31 @@ public sealed class GuildsController : ControllerBase
         var result = await _guildQueryService.GetGuildUniqueEncountersAsync(id, raidTypeId, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("{id:int}/progress")]
+    public async Task<ActionResult<List<GuildProgressDto>>> GetGuildProgress(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _guildQueryService.GetGuildProgressAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}/raid-statistics")]
+    public async Task<ActionResult<GuildRaidStatisticsDto>> GetGuildRaidStatistics(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _guildQueryService.GetGuildRaidStatisticsAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}/boss-statistics")]
+    public async Task<ActionResult<List<GuildBossStatisticsDto>>> GetGuildBossStatistics(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _guildQueryService.GetGuildBossStatisticsAsync(id, cancellationToken);
+        return Ok(result);
+    }
 }

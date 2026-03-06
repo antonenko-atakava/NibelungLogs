@@ -642,4 +642,147 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
 
         return encounters;
     }
+
+    public async Task<List<GuildProgressDto>> GetGuildProgressAsync(int guildId, CancellationToken cancellationToken = default)
+    {
+        var guild = await _context.Guilds
+            .FirstOrDefaultAsync(g => g.Id == guildId, cancellationToken);
+
+        if (guild == null)
+            return [];
+
+        var raids = await _context.Raids
+            .Include(r => r.RaidType)
+            .Where(r => r.GuildName == guild.GuildName)
+            .OrderBy(r => r.StartTime)
+            .Select(r => new GuildProgressDto
+            {
+                StartTime = r.StartTime,
+                RaidTypeName = r.RaidType.Name,
+                Wipes = r.Wipes,
+                CompletedBosses = r.CompletedBosses,
+                TotalBosses = r.TotalBosses,
+                ProgressScore = r.TotalBosses > 0
+                    ? ((double)r.CompletedBosses / r.TotalBosses * 100.0) - (r.Wipes * 5.0)
+                    : 0.0
+            })
+            .ToListAsync(cancellationToken);
+
+        return raids;
+    }
+
+    public async Task<GuildRaidStatisticsDto> GetGuildRaidStatisticsAsync(int guildId, CancellationToken cancellationToken = default)
+    {
+        var guild = await _context.Guilds
+            .FirstOrDefaultAsync(g => g.Id == guildId, cancellationToken);
+
+        if (guild == null)
+            return new GuildRaidStatisticsDto();
+
+        var raids = await _context.Raids
+            .Where(r => r.GuildName == guild.GuildName)
+            .ToListAsync(cancellationToken);
+
+        var encounters = await _context.Encounters
+            .Include(e => e.Raid)
+            .Where(e => e.Raid.GuildName == guild.GuildName)
+            .ToListAsync(cancellationToken);
+
+        if (raids.Count == 0)
+            return new GuildRaidStatisticsDto();
+
+        var totalWipes = raids.Sum(r => r.Wipes);
+        var averageWipesPerRaid = (double)totalWipes / raids.Count;
+
+        var successfulEncounters = encounters.Count(e => e.Success);
+        var totalEncounters = encounters.Count;
+        var successRate = totalEncounters > 0 ? (double)successfulEncounters / totalEncounters * 100.0 : 0.0;
+
+        var totalRaidTimeSeconds = raids.Sum(r => r.TotalTime);
+        var averageRaidTimeMinutes = raids.Count > 0 ? (double)totalRaidTimeSeconds / raids.Count / 60.0 : 0.0;
+
+        var totalDamage = raids.Sum(r => r.TotalDamage);
+        var totalHealing = raids.Sum(r => r.TotalHealing);
+
+        var gearScores = raids
+            .Where(r => !string.IsNullOrWhiteSpace(r.AverageGearScore))
+            .Select(r => double.TryParse(r.AverageGearScore, out var score) ? score : 0.0)
+            .Where(score => score > 0)
+            .ToList();
+
+        var maxGearScores = raids
+            .Where(r => !string.IsNullOrWhiteSpace(r.MaxGearScore))
+            .Select(r => double.TryParse(r.MaxGearScore, out var score) ? score : 0.0)
+            .Where(score => score > 0)
+            .ToList();
+
+        var averageGearScore = gearScores.Count > 0 ? gearScores.Average() : 0.0;
+        var maxGearScore = maxGearScores.Count > 0 ? maxGearScores.Max() : 0.0;
+
+        var totalSuccessfulEncounters = successfulEncounters;
+        var totalFailedEncounters = totalEncounters - successfulEncounters;
+
+        var averageRaidSize = encounters.Count > 0
+            ? encounters.Average(e => e.Tanks + e.Healers + e.DamageDealers)
+            : 0.0;
+
+        return new GuildRaidStatisticsDto
+        {
+            AverageWipesPerRaid = averageWipesPerRaid,
+            SuccessRate = successRate,
+            AverageRaidTimeMinutes = averageRaidTimeMinutes,
+            TotalDamage = totalDamage,
+            TotalHealing = totalHealing,
+            AverageGearScore = averageGearScore,
+            MaxGearScore = maxGearScore,
+            TotalSuccessfulEncounters = totalSuccessfulEncounters,
+            TotalFailedEncounters = totalFailedEncounters,
+            AverageRaidSize = averageRaidSize
+        };
+    }
+
+    public async Task<List<GuildBossStatisticsDto>> GetGuildBossStatisticsAsync(int guildId, CancellationToken cancellationToken = default)
+    {
+        var guild = await _context.Guilds
+            .FirstOrDefaultAsync(g => g.Id == guildId, cancellationToken);
+
+        if (guild == null)
+            return [];
+
+        var encounters = await _context.Encounters
+            .Include(e => e.Raid)
+            .Where(e => e.Raid.GuildName == guild.GuildName && !string.IsNullOrWhiteSpace(e.EncounterName))
+            .Select(e => new
+            {
+                e.EncounterEntry,
+                e.EncounterName,
+                e.Success,
+                e.StartTime,
+                e.EndTime
+            })
+            .ToListAsync(cancellationToken);
+
+        var bossStats = encounters
+            .GroupBy(e => new { e.EncounterEntry, e.EncounterName })
+            .Select(g => new GuildBossStatisticsDto
+            {
+                EncounterEntry = g.Key.EncounterEntry ?? "",
+                EncounterName = g.Key.EncounterName ?? "",
+                TotalAttempts = g.Count(),
+                SuccessfulAttempts = g.Count(e => e.Success),
+                SuccessRate = g.Count() > 0 ? (double)g.Count(e => e.Success) / g.Count() * 100.0 : 0.0,
+                AverageKillTimeSeconds = g.Where(e => e.Success && e.EndTime > e.StartTime)
+                    .Select(e => (e.EndTime - e.StartTime).TotalSeconds)
+                    .DefaultIfEmpty(0)
+                    .Average(),
+                TotalKills = g.Count(e => e.Success)
+            })
+            .Where(b => b.TotalAttempts > 0)
+            .OrderByDescending(b => b.TotalKills)
+            .ThenByDescending(b => b.SuccessRate)
+            .Take(10)
+            .ToList();
+
+        return bossStats;
+    }
 }

@@ -60,4 +60,19 @@ public sealed class GuildQueryService : IGuildQueryService
     {
         return await _repository.GetGuildUniqueEncountersAsync(guildId, raidTypeId, cancellationToken);
     }
+
+    public async Task<List<GuildProgressDto>> GetGuildProgressAsync(int guildId, CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetGuildProgressAsync(guildId, cancellationToken);
+    }
+
+    public async Task<GuildRaidStatisticsDto> GetGuildRaidStatisticsAsync(int guildId, CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetGuildRaidStatisticsAsync(guildId, cancellationToken);
+    }
+
+    public async Task<List<GuildBossStatisticsDto>> GetGuildBossStatisticsAsync(int guildId, CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetGuildBossStatisticsAsync(guildId, cancellationToken);
+    }
 }
