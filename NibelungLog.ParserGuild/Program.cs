@@ -47,7 +47,9 @@ public sealed class Program
         var httpClientHandler = new HttpClientHandler
         {
             CookieContainer = new CookieContainer(),
-            UseCookies = true
+            UseCookies = true,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            AllowAutoRedirect = true
         };
 
         var httpClient = new HttpClient(httpClientHandler)
@@ -56,11 +58,16 @@ public sealed class Program
             Timeout = TimeSpan.FromMinutes(5)
         };
 
-        httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
-        httpClient.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9");
-        httpClient.DefaultRequestHeaders.Add(
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate, br");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Connection", "keep-alive");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
 
         serviceCollection.AddSingleton(httpClient);
         serviceCollection.AddTransient<IWowCircleAuthService, WowCircleAuthService>();
@@ -103,7 +110,12 @@ public sealed class Program
         using var scope = serviceProvider.CreateScope();
         var guildParser = scope.ServiceProvider.GetRequiredService<GuildParser>();
 
+        var guildParserLogger = serviceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger<GuildParser>();
+
         guildParser.SetAuthorizedHttpClient(httpClient);
+        guildParser.SetLogger(guildParserLogger);
 
         var guildParserOptions = new GuildParserOptions
         {

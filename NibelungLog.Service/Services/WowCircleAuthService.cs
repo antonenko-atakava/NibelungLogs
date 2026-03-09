@@ -27,53 +27,117 @@ public sealed class WowCircleAuthService : IWowCircleAuthService
 
     public async Task<LoginResult> LoginAsync(string accountName, string password, int serverId, CancellationToken cancellationToken = default)
     {
-        using var loginPageRequest = new HttpRequestMessage(HttpMethod.Get, "/login");
-        loginPageRequest.Headers.Add("Referer", "https://cp.wowcircle.net");
-        
-        using var loginPageResponse = await _httpClient.SendAsync(loginPageRequest, cancellationToken);
-        loginPageResponse.EnsureSuccessStatusCode();
+        const int maxRetries = 5;
+        const int retryDelayMs = 5000;
 
-        var requestData = new LoginRequestData
+        for (var retryAttempt = 0; retryAttempt < maxRetries; retryAttempt++)
         {
-            AccountName = accountName,
-            Password = password,
-            Captcha = string.Empty
-        };
+            try
+            {
+                using var loginPageRequest = new HttpRequestMessage(HttpMethod.Get, "/login");
+                loginPageRequest.Headers.Add("Referer", "https://cp.wowcircle.net");
+                
+                using var loginPageResponse = await _httpClient.SendAsync(loginPageRequest, cancellationToken);
+                loginPageResponse.EnsureSuccessStatusCode();
 
-        var rpcRequest = new RpcRequest
-        {
-            Type = "rpc",
-            Tid = 4,
-            Action = "wow_Services",
-            Method = "cmdLogin",
-            Data = [requestData]
-        };
+                var requestData = new LoginRequestData
+                {
+                    AccountName = accountName,
+                    Password = password,
+                    Captcha = string.Empty
+                };
 
-        var requestUri = $"/main.php?1&serverId={serverId}";
-        
-        using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
-        {
-            Content = JsonContent.Create(rpcRequest, options: _jsonOptions)
-        };
+                var rpcRequest = new RpcRequest
+                {
+                    Type = "rpc",
+                    Tid = 4,
+                    Action = "wow_Services",
+                    Method = "cmdLogin",
+                    Data = [requestData]
+                };
 
-        requestMessage.Headers.Add("Origin", "https://cp.wowcircle.net");
-        requestMessage.Headers.Add("Referer", "https://cp.wowcircle.net/login");
-        requestMessage.Headers.Add("X-Requested-With", "XMLHttpRequest");
+                var requestUri = $"/main.php?1&serverId={serverId}";
+                
+                using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                {
+                    Content = JsonContent.Create(rpcRequest, options: _jsonOptions)
+                };
 
-        using var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Login failed with status {StatusCode}: {Content}", response.StatusCode, errorContent);
-            response.EnsureSuccessStatusCode();
+                requestMessage.Headers.Add("Origin", "https://cp.wowcircle.net");
+                requestMessage.Headers.Add("Referer", "https://cp.wowcircle.net/login");
+                requestMessage.Headers.Add("X-Requested-With", "XMLHttpRequest");
+
+                using var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogError("Login failed with status {StatusCode}: {Content}", response.StatusCode, errorContent);
+                    response.EnsureSuccessStatusCode();
+                }
+
+                var rpcResponse = await response.Content.ReadFromJsonAsync<RpcResponse>(_jsonOptions, cancellationToken);
+                
+                if (rpcResponse == null)
+                    throw new InvalidOperationException("Failed to deserialize login response");
+
+                return rpcResponse.Result;
+            }
+            catch (HttpRequestException httpException) when (httpException.InnerException is System.Net.Sockets.SocketException)
+            {
+                if (retryAttempt < maxRetries - 1)
+                {
+                    _logger.LogWarning(
+                        "Ошибка подключения при авторизации. Попытка {Attempt}/{MaxAttempts}. Ожидание {DelayMs}ms перед повтором: {Message}",
+                        retryAttempt + 1,
+                        maxRetries,
+                        retryDelayMs,
+                        httpException.Message);
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(retryDelayMs), cancellationToken);
+                    continue;
+                }
+
+                _logger.LogError(httpException, "Ошибка подключения при авторизации после {MaxAttempts} попыток", maxRetries);
+                throw;
+            }
+            catch (HttpRequestException httpException)
+            {
+                if (retryAttempt < maxRetries - 1)
+                {
+                    _logger.LogWarning(
+                        "HTTP ошибка при авторизации. Попытка {Attempt}/{MaxAttempts}. Ожидание {DelayMs}ms перед повтором: {Message}",
+                        retryAttempt + 1,
+                        maxRetries,
+                        retryDelayMs,
+                        httpException.Message);
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(retryDelayMs), cancellationToken);
+                    continue;
+                }
+
+                _logger.LogError(httpException, "HTTP ошибка при авторизации после {MaxAttempts} попыток", maxRetries);
+                throw;
+            }
+            catch (TaskCanceledException canceledException)
+            {
+                if (retryAttempt < maxRetries - 1)
+                {
+                    _logger.LogWarning(
+                        "Таймаут при авторизации. Попытка {Attempt}/{MaxAttempts}. Ожидание {DelayMs}ms перед повтором",
+                        retryAttempt + 1,
+                        maxRetries,
+                        retryDelayMs);
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(retryDelayMs), cancellationToken);
+                    continue;
+                }
+
+                _logger.LogError(canceledException, "Таймаут при авторизации после {MaxAttempts} попыток", maxRetries);
+                throw;
+            }
         }
 
-        var rpcResponse = await response.Content.ReadFromJsonAsync<RpcResponse>(_jsonOptions, cancellationToken);
-        
-        if (rpcResponse == null)
-            throw new InvalidOperationException("Failed to deserialize login response");
-
-        return rpcResponse.Result;
+        throw new InvalidOperationException($"Не удалось выполнить авторизацию после {maxRetries} попыток");
     }
 }

@@ -10,7 +10,7 @@ namespace NibelungLog.ParserGuild;
 
 public sealed class GuildParser : BaseParser
 {
-    private readonly SemaphoreSlim semaphoreSlim = new(6, 6);
+    private readonly SemaphoreSlim semaphoreSlim = new(3, 3);
     private readonly GuildParserDataService guildParserDataService;
     private readonly ILogger<GuildParser> logger;
 
@@ -47,7 +47,15 @@ public sealed class GuildParser : BaseParser
             guildMembersByGuildId.Count,
             totalGuildMemberCount);
 
-        await guildParserDataService.SaveAsync(filteredGuilds, guildMembersByGuildId, cancellationToken);
+        try
+        {
+            await guildParserDataService.SaveAsync(filteredGuilds, guildMembersByGuildId, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Ошибка при сохранении данных в БД. Загружено участников: {GuildMemberCount}", totalGuildMemberCount);
+            throw;
+        }
 
         globalStopwatch.Stop();
 
@@ -140,6 +148,12 @@ public sealed class GuildParser : BaseParser
                             return;
                         }
 
+                        if (firstPageResult.TotalCount == 0)
+                        {
+                            logger.LogWarning("Гильдия {GuildName} ({GuildId}) не имеет участников", guild.Name, guild.GuildId);
+                            return;
+                        }
+
                         var loadedGuildMemberCount = 0;
                         var totalGuildMemberCount = firstPageResult.TotalCount;
 
@@ -182,22 +196,42 @@ public sealed class GuildParser : BaseParser
                             loadedGuildMemberCount += pageResult.GuildMembers.Count;
                         }
 
-                        logger.LogInformation(
-                            "Гильдия {GuildName} ({GuildId}) загружена: {GuildMemberCount} из {ExpectedGuildMemberCount}",
-                            guild.Name,
-                            guild.GuildId,
-                            loadedGuildMemberCount,
-                            totalGuildMemberCount);
+                        if (loadedGuildMemberCount < totalGuildMemberCount)
+                        {
+                            logger.LogWarning(
+                                "Гильдия {GuildName} ({GuildId}) загружена частично: {GuildMemberCount} из {ExpectedGuildMemberCount}",
+                                guild.Name,
+                                guild.GuildId,
+                                loadedGuildMemberCount,
+                                totalGuildMemberCount);
+                        }
+                        else
+                        {
+                            logger.LogInformation(
+                                "Гильдия {GuildName} ({GuildId}) загружена полностью: {GuildMemberCount} участников",
+                                guild.Name,
+                                guild.GuildId,
+                                loadedGuildMemberCount);
+                        }
                     },
                     cancellationToken));
 
             await Task.WhenAll(guildTasks);
 
+            logger.LogInformation(
+                "Обработано гильдий в батче: {TotalCount}",
+                guildBatch.Count());
+
             if (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(750), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(1500), cancellationToken);
             }
         }
+
+        var totalLoadedMembers = guildMembersByGuildId.Values.Sum(guildMembers => guildMembers.Count);
+        logger.LogInformation(
+            "Всего загружено участников из всех гильдий: {TotalMembersCount}",
+            totalLoadedMembers);
 
         return guildMembersByGuildId.ToDictionary(
             pair => pair.Key,
@@ -293,7 +327,7 @@ public sealed class GuildParser : BaseParser
 
                 if (responses == null)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500 * (attempt + 1)), cancellationToken);
+                    await Task.Delay(TimeSpan.FromMilliseconds(1000 * (attempt + 1)), cancellationToken);
                     continue;
                 }
 
@@ -301,7 +335,7 @@ public sealed class GuildParser : BaseParser
 
                 if (response?.Result?.Data == null)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500 * (attempt + 1)), cancellationToken);
+                    await Task.Delay(TimeSpan.FromMilliseconds(1000 * (attempt + 1)), cancellationToken);
                     continue;
                 }
 
@@ -311,7 +345,7 @@ public sealed class GuildParser : BaseParser
                     true);
             }
 
-            await Task.Delay(TimeSpan.FromMilliseconds(2000), cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(3000), cancellationToken);
 
             var fallbackRequest = CreateRequest(
                 "cmdGuildMembers",
@@ -343,7 +377,7 @@ public sealed class GuildParser : BaseParser
 
             if (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(1000), cancellationToken);
             }
         }
     }

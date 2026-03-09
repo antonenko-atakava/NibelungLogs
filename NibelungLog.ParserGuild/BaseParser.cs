@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using NibelungLog.ParserGuild.Models;
 
 namespace NibelungLog.ParserGuild;
@@ -15,12 +16,18 @@ public abstract class BaseParser
 
     private int requestIdentifier;
     private HttpClient? authorizedHttpClient;
+    protected ILogger? Logger { get; private set; }
 
     public abstract Task InvokeAsync(GuildParserOptions options, CancellationToken cancellationToken = default);
 
     public void SetAuthorizedHttpClient(HttpClient httpClient)
     {
         authorizedHttpClient = httpClient;
+    }
+
+    public void SetLogger(ILogger logger)
+    {
+        Logger = logger;
     }
 
     protected RequestEnvelope<TRequestData> CreateRequest<TRequestData>(string method, TRequestData[] data)
@@ -38,70 +45,141 @@ public abstract class BaseParser
         RequestEnvelope<TRequestData>[] requests,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var httpClient = GetHttpClient();
-            var shouldDisposeHttpClient = authorizedHttpClient == null;
+        const int maxRetries = 3;
+        const int retryDelayMs = 65000;
 
+        for (var retryAttempt = 0; retryAttempt < maxRetries; retryAttempt++)
+        {
             try
             {
-                var serializedRequests = JsonSerializer.Serialize(requests, jsonSerializerOptions);
-                var requestUri = $"/main.php?1&serverId={serverId}";
-                using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                var httpClient = GetHttpClient();
+                var shouldDisposeHttpClient = authorizedHttpClient == null;
+
+                try
                 {
-                    Content = new StringContent(serializedRequests, Encoding.UTF8, "application/json")
-                };
-                requestMessage.Headers.TryAddWithoutValidation("Origin", "https://cp.wowcircle.net");
-                requestMessage.Headers.TryAddWithoutValidation("Referer", "https://cp.wowcircle.net/guilds");
-                requestMessage.Headers.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
+                    var serializedRequests = JsonSerializer.Serialize(requests, jsonSerializerOptions);
+                    var requestUri = $"/main.php?1&serverId={serverId}";
+                    using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                    {
+                        Content = new StringContent(serializedRequests, Encoding.UTF8, "application/json")
+                    };
+                    requestMessage.Headers.TryAddWithoutValidation("Origin", "https://cp.wowcircle.net");
+                    requestMessage.Headers.TryAddWithoutValidation("Referer", "https://cp.wowcircle.net/guilds");
+                    requestMessage.Headers.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
+                    requestMessage.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+                    requestMessage.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+                    requestMessage.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
 
-                using var httpResponseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
+                    using var httpResponseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
 
-                if (!httpResponseMessage.IsSuccessStatusCode)
-                {
-                    return null;
-                }
+                    if (!httpResponseMessage.IsSuccessStatusCode)
+                    {
+                        var statusCode = (int)httpResponseMessage.StatusCode;
+                        var errorContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+                        
+                        if (statusCode == 503)
+                        {
+                            if (retryAttempt < maxRetries - 1)
+                            {
+                                Logger?.LogWarning(
+                                    "Получена ошибка 503 (лимит запросов). Попытка {Attempt}/{MaxAttempts}. Ожидание {DelayMs}ms перед повтором",
+                                    retryAttempt + 1,
+                                    maxRetries,
+                                    retryDelayMs);
 
-                var responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+                                await Task.Delay(TimeSpan.FromMilliseconds(retryDelayMs), cancellationToken);
+                                continue;
+                            }
 
-                if (responseContent.Contains("Please enable Javascript", StringComparison.OrdinalIgnoreCase))
-                {
-                    return null;
-                }
+                            Logger?.LogError(
+                                "HTTP запрос завершился с ошибкой 503 после {MaxAttempts} попыток: Uri={Uri}",
+                                maxRetries,
+                                requestUri);
+                        }
+                        else
+                        {
+                            Logger?.LogError(
+                                "HTTP запрос завершился с ошибкой: StatusCode={StatusCode}, Uri={Uri}",
+                                statusCode,
+                                requestUri);
 
-                using var jsonDocument = JsonDocument.Parse(responseContent);
+                            if (statusCode == 443)
+                            {
+                                Logger?.LogWarning("Обнаружена ошибка 443. Возможные причины: блокировка Cloudflare, SSL/TLS проблемы, недостаточно заголовков для имитации браузера");
+                            }
+                        }
 
-                if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
-                {
-                    return JsonSerializer.Deserialize<List<ResponseEnvelope<TResult>>>(responseContent, jsonSerializerOptions);
-                }
+                        return null;
+                    }
 
-                if (jsonDocument.RootElement.ValueKind == JsonValueKind.Object)
-                {
-                    var singleResponse = JsonSerializer.Deserialize<ResponseEnvelope<TResult>>(responseContent, jsonSerializerOptions);
+                    var responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
 
-                    if (singleResponse == null)
+                    if (responseContent.Contains("Please enable Javascript", StringComparison.OrdinalIgnoreCase))
                     {
                         return null;
                     }
 
-                    return [singleResponse];
-                }
+                    using var jsonDocument = JsonDocument.Parse(responseContent);
 
+                    if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
+                    {
+                        return JsonSerializer.Deserialize<List<ResponseEnvelope<TResult>>>(responseContent, jsonSerializerOptions);
+                    }
+
+                    if (jsonDocument.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        var singleResponse = JsonSerializer.Deserialize<ResponseEnvelope<TResult>>(responseContent, jsonSerializerOptions);
+
+                        if (singleResponse == null)
+                        {
+                            return null;
+                        }
+
+                        return [singleResponse];
+                    }
+
+                    return null;
+                }
+                finally
+                {
+                    if (shouldDisposeHttpClient)
+                    {
+                        httpClient.Dispose();
+                    }
+                }
+            }
+            catch (HttpRequestException httpException)
+            {
+                Logger?.LogError(httpException, "HTTP исключение при выполнении запроса: {Message}", httpException.Message);
+                
+                if (retryAttempt < maxRetries - 1)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(retryDelayMs), cancellationToken);
+                    continue;
+                }
+                
                 return null;
             }
-            finally
+            catch (TaskCanceledException canceledException)
             {
-                if (shouldDisposeHttpClient)
+                Logger?.LogWarning(canceledException, "Запрос был отменен: {Message}", canceledException.Message);
+                return null;
+            }
+            catch (Exception exception)
+            {
+                Logger?.LogError(exception, "Неожиданное исключение при выполнении запроса: {Message}", exception.Message);
+                
+                if (retryAttempt < maxRetries - 1)
                 {
-                    httpClient.Dispose();
+                    await Task.Delay(TimeSpan.FromMilliseconds(retryDelayMs), cancellationToken);
+                    continue;
                 }
+                
+                return null;
             }
         }
-        catch
-        {
-            return null;
-        }
+
+        return null;
     }
 
     protected ResponseEnvelope<TResult>? GetResponseByRequestIdentifier<TResult>(
@@ -126,7 +204,9 @@ public abstract class BaseParser
         var httpClientHandler = new HttpClientHandler
         {
             CookieContainer = cookieContainer,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            UseCookies = true,
+            AllowAutoRedirect = true
         };
 
         var httpClient = new HttpClient(httpClientHandler)
@@ -135,11 +215,16 @@ public abstract class BaseParser
             Timeout = TimeSpan.FromMinutes(5)
         };
 
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate, br");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Connection", "keep-alive");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
         httpClient.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36");
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "ru-RU,ru;q=0.9");
         httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://cp.wowcircle.net/guilds");
         httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://cp.wowcircle.net");
 

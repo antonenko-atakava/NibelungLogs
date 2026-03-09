@@ -28,6 +28,7 @@ public sealed class GuildParserDataService
     {
         if (guilds.Count == 0)
         {
+            logger.LogWarning("Нет гильдий для сохранения");
             return;
         }
 
@@ -36,8 +37,19 @@ public sealed class GuildParserDataService
             .Select(group => group.First())
             .ToList();
 
-        await SaveGuildsAsync(distinctGuilds, cancellationToken);
-        applicationDbContext.ChangeTracker.Clear();
+        logger.LogInformation("Начинается сохранение: гильдий {GuildCount}", distinctGuilds.Count);
+
+        try
+        {
+            await SaveGuildsAsync(distinctGuilds, cancellationToken);
+            applicationDbContext.ChangeTracker.Clear();
+            logger.LogInformation("Гильдии сохранены: {GuildCount}", distinctGuilds.Count);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Ошибка при сохранении гильдий");
+            throw;
+        }
 
         var guildsByGuildId = await GetGuildsByGuildIdAsync(
             distinctGuilds.Select(guild => guild.GuildId).ToList(),
@@ -47,6 +59,8 @@ public sealed class GuildParserDataService
             .SelectMany(pair => pair.Value.Select(guildMember => (GuildId: pair.Key, GuildMember: guildMember)))
             .ToList();
 
+        logger.LogInformation("Подготовлено к сохранению участников: {GuildMemberCount}", guildMemberImports.Count);
+
         if (guildMemberImports.Count == 0)
         {
             logger.LogInformation("Сохранены только гильдии без участников: {GuildCount}", distinctGuilds.Count);
@@ -55,22 +69,43 @@ public sealed class GuildParserDataService
 
         applicationDbContext.ChangeTracker.Clear();
 
-        var playersByCharacterGuid = await SavePlayersAsync(
-            guildMemberImports.Select(importItem => importItem.GuildMember).ToList(),
-            cancellationToken);
+        Dictionary<string, Player> playersByCharacterGuid;
 
-        applicationDbContext.ChangeTracker.Clear();
+        try
+        {
+            playersByCharacterGuid = await SavePlayersAsync(
+                guildMemberImports.Select(importItem => importItem.GuildMember).ToList(),
+                cancellationToken);
+            applicationDbContext.ChangeTracker.Clear();
+            logger.LogInformation("Игроки сохранены: {PlayerCount}", playersByCharacterGuid.Count);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Ошибка при сохранении игроков. Загружено участников: {GuildMemberCount}", guildMemberImports.Count);
+            throw;
+        }
 
-        await SaveGuildMembershipsAsync(
-            guildMemberImports,
-            guildsByGuildId,
-            playersByCharacterGuid,
-            cancellationToken);
+        try
+        {
+            await SaveGuildMembershipsAsync(
+                guildMemberImports,
+                guildsByGuildId,
+                playersByCharacterGuid,
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Ошибка при сохранении участников гильдий. Загружено участников: {GuildMemberCount}", guildMemberImports.Count);
+            throw;
+        }
+
+        var savedGuildMembersCount = await GetSavedGuildMembersCountAsync(cancellationToken);
 
         logger.LogInformation(
-            "Сохранено гильдий: {GuildCount}, участников: {GuildMemberCount}",
+            "Сохранено гильдий: {GuildCount}, участников: {GuildMemberCount}. Всего участников в БД: {TotalGuildMembersCount}",
             distinctGuilds.Count,
-            guildMemberImports.Count);
+            guildMemberImports.Count,
+            savedGuildMembersCount);
     }
 
     private async Task SaveGuildsAsync(List<GuildListItemRecord> guilds, CancellationToken cancellationToken)
@@ -81,6 +116,7 @@ public sealed class GuildParserDataService
 
         var createdAt = DateTime.UtcNow;
         var guildsToCreate = new List<Guild>();
+        var updatedGuildsCount = 0;
 
         foreach (var guild in guilds)
         {
@@ -91,6 +127,7 @@ public sealed class GuildParserDataService
                 existingGuild.CreateDate = guild.CreateDate;
                 existingGuild.LeaderName = guild.LeaderName;
                 existingGuild.LastUpdated = createdAt;
+                updatedGuildsCount++;
                 continue;
             }
 
@@ -108,6 +145,12 @@ public sealed class GuildParserDataService
         if (guildsToCreate.Count > 0)
         {
             await applicationDbContext.Guilds.AddRangeAsync(guildsToCreate, cancellationToken);
+            logger.LogInformation("Создано новых гильдий: {NewGuildsCount}", guildsToCreate.Count);
+        }
+
+        if (updatedGuildsCount > 0)
+        {
+            logger.LogInformation("Обновлено гильдий: {UpdatedGuildsCount}", updatedGuildsCount);
         }
 
         await applicationDbContext.SaveChangesAsync(cancellationToken);
@@ -127,6 +170,7 @@ public sealed class GuildParserDataService
             cancellationToken);
 
         var playersToCreate = new List<Player>();
+        var updatedPlayersCount = 0;
 
         foreach (var guildMember in distinctGuildMembers)
         {
@@ -135,6 +179,7 @@ public sealed class GuildParserDataService
                 if (string.IsNullOrEmpty(existingPlayer.ClassName))
                 {
                     existingPlayer.ClassName = ClassMappings.GetClassName(guildMember.CharacterClass);
+                    updatedPlayersCount++;
                 }
 
                 continue;
@@ -158,6 +203,12 @@ public sealed class GuildParserDataService
         if (playersToCreate.Count > 0)
         {
             await applicationDbContext.Players.AddRangeAsync(playersToCreate, cancellationToken);
+            logger.LogInformation("Создано новых игроков: {NewPlayersCount}", playersToCreate.Count);
+        }
+
+        if (updatedPlayersCount > 0)
+        {
+            logger.LogInformation("Обновлено игроков: {UpdatedPlayersCount}", updatedPlayersCount);
         }
 
         await applicationDbContext.SaveChangesAsync(cancellationToken);
@@ -199,6 +250,7 @@ public sealed class GuildParserDataService
 
         var currentTimestamp = DateTime.UtcNow;
         var guildMembersToCreate = new List<GuildMember>();
+        var updatedGuildMembersCount = 0;
 
         foreach (var guildMemberImport in guildMemberImports)
         {
@@ -218,6 +270,7 @@ public sealed class GuildParserDataService
             {
                 existingGuildMember.Rank = guildMemberImport.GuildMember.Rank;
                 existingGuildMember.LastUpdated = currentTimestamp;
+                updatedGuildMembersCount++;
                 continue;
             }
 
@@ -234,6 +287,12 @@ public sealed class GuildParserDataService
         if (guildMembersToCreate.Count > 0)
         {
             await guildMembershipApplicationDbContext.GuildMembers.AddRangeAsync(guildMembersToCreate, cancellationToken);
+            logger.LogInformation("Создано новых участников гильдий: {NewGuildMembersCount}", guildMembersToCreate.Count);
+        }
+
+        if (updatedGuildMembersCount > 0)
+        {
+            logger.LogInformation("Обновлено участников гильдий: {UpdatedGuildMembersCount}", updatedGuildMembersCount);
         }
 
         await guildMembershipApplicationDbContext.SaveChangesAsync(cancellationToken);
@@ -363,5 +422,10 @@ public sealed class GuildParserDataService
     private static string CreateCompositeKey(int guildId, int playerId)
     {
         return $"{guildId}:{playerId}";
+    }
+
+    private async Task<int> GetSavedGuildMembersCountAsync(CancellationToken cancellationToken)
+    {
+        return await applicationDbContext.GuildMembers.CountAsync(cancellationToken);
     }
 }
