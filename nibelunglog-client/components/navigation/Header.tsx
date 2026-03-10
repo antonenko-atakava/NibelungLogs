@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const navigationItems = [
   { href: "/", label: "Главная" },
   { href: "/players", label: "Игроки" },
+  { href: "/guilds", label: "Гильдии" },
   { href: "/raids", label: "Рейды" },
 ];
 

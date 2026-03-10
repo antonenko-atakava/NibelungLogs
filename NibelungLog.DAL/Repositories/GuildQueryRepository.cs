@@ -35,57 +35,18 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
         var guildNames = await guildQuery.Select(g => g.GuildName).ToListAsync(cancellationToken);
         var totalCount = guildNames.Count;
 
-        var fullRaidsByGuild = await _context.Raids
-            .Where(r => guildNames.Contains(r.GuildName) && r.CompletedBosses == r.TotalBosses)
-            .GroupBy(r => r.GuildName)
-            .Select(g => new { GuildName = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.GuildName, x => x.Count, cancellationToken);
-
-        var uniqueLeadersByGuild = await _context.Raids
+        var raidStatsByGuild = await _context.Raids
             .Where(r => guildNames.Contains(r.GuildName))
             .GroupBy(r => r.GuildName)
-            .Select(g => new { GuildName = g.Key, Leaders = g.Select(r => r.LeaderName).Distinct().Count() })
-            .ToDictionaryAsync(x => x.GuildName, x => x.Leaders, cancellationToken);
-
-        var topDamageDealersThreshold = await _context.PlayerEncounters
-            .Include(pe => pe.Encounter)
-            .Where(pe => pe.Role == "3" && pe.Encounter.EncounterEntry != "33113")
-            .GroupBy(pe => pe.PlayerId)
             .Select(g => new
             {
-                PlayerId = g.Key,
-                AverageDps = g.Average(pe => pe.Dps)
+                GuildName = g.Key,
+                FullRaidsCount = g.Count(r => r.CompletedBosses == r.TotalBosses),
+                TotalBossKills = g.Sum(r => r.CompletedBosses),
+                TotalWipes = g.Sum(r => r.Wipes),
+                AverageRaidTimeMinutes = g.Average(r => (double)r.TotalTime / 60.0)
             })
-            .OrderByDescending(x => x.AverageDps)
-            .Skip((int)(await _context.PlayerEncounters
-                .Include(pe => pe.Encounter)
-                .Where(pe => pe.Role == "3" && pe.Encounter.EncounterEntry != "33113")
-                .Select(pe => pe.PlayerId)
-                .Distinct()
-                .CountAsync(cancellationToken) * 0.2))
-            .Select(x => (double?)x.AverageDps)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var thresholdValue = topDamageDealersThreshold ?? 0.0;
-
-        var topDamageDealerPlayerIds = await _context.PlayerEncounters
-            .Include(pe => pe.Encounter)
-            .Where(pe => pe.Role == "3" && pe.Encounter.EncounterEntry != "33113")
-            .GroupBy(pe => pe.PlayerId)
-            .Select(g => new
-            {
-                PlayerId = g.Key,
-                AverageDps = g.Average(pe => pe.Dps)
-            })
-            .Where(x => x.AverageDps >= thresholdValue)
-            .Select(x => x.PlayerId)
-            .ToListAsync(cancellationToken);
-
-        var topDamageDealersByGuild = await _context.GuildMembers
-            .Where(gm => topDamageDealerPlayerIds.Contains(gm.PlayerId))
-            .GroupBy(gm => gm.Guild.GuildName)
-            .Select(g => new { GuildName = g.Key, Count = g.Select(gm => gm.PlayerId).Distinct().Count() })
-            .ToDictionaryAsync(x => x.GuildName, x => x.Count, cancellationToken);
+            .ToDictionaryAsync(x => x.GuildName, cancellationToken);
 
         var guildsData = await guildQuery
             .Select(g => new
@@ -116,11 +77,21 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
                 .ThenBy(m => m.Rank)
                 .FirstOrDefault();
 
-            var fullRaidsCount = fullRaidsByGuild.GetValueOrDefault(g.GuildName, 0);
-            var uniqueLeadersCount = uniqueLeadersByGuild.GetValueOrDefault(g.GuildName, 0);
-            var topDamageDealersCount = topDamageDealersByGuild.GetValueOrDefault(g.GuildName, 0);
+            var raidStats = raidStatsByGuild.GetValueOrDefault(g.GuildName);
+            
+            var fullRaidsCount = raidStats?.FullRaidsCount ?? 0;
+            var totalBossKills = raidStats?.TotalBossKills ?? 0;
+            var totalWipes = raidStats?.TotalWipes ?? 0;
+            var averageRaidTimeMinutes = raidStats?.AverageRaidTimeMinutes ?? 0;
 
-            var rating = (fullRaidsCount * 10.0) + (uniqueLeadersCount * 5.0) + (topDamageDealersCount * 3.0);
+            var speedBonus = averageRaidTimeMinutes > 0 
+                ? Math.Max(0, 300 - averageRaidTimeMinutes) / 10.0 
+                : 0;
+
+            var rating = (fullRaidsCount * 20.0) 
+                       + (totalBossKills * 2.0) 
+                       + speedBonus 
+                       - (totalWipes * 3.0);
 
             return new GuildDto
             {
@@ -131,8 +102,8 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
                 MembersCount = g.MembersCount,
                 LastUpdated = g.LastUpdated,
                 FullRaidsCount = fullRaidsCount,
-                UniqueRaidLeadersCount = uniqueLeadersCount,
-                TopDamageDealersCount = topDamageDealersCount,
+                UniqueRaidLeadersCount = 0,
+                TopDamageDealersCount = 0,
                 Rating = rating
             };
         }).ToList();
@@ -211,47 +182,29 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
             .Where(e => e.Raid.GuildName == guild.GuildName)
             .CountAsync(cancellationToken);
 
-        var topDamageDealersThreshold = await _context.PlayerEncounters
-            .Include(pe => pe.Encounter)
-            .Where(pe => pe.Role == "3" && pe.Encounter.EncounterEntry != "33113")
-            .GroupBy(pe => pe.PlayerId)
+        var raidStats = await _context.Raids
+            .Where(r => r.GuildName == guild.GuildName)
+            .GroupBy(r => 1)
             .Select(g => new
             {
-                PlayerId = g.Key,
-                AverageDps = g.Average(pe => pe.Dps)
+                TotalBossKills = g.Sum(r => r.CompletedBosses),
+                TotalWipes = g.Sum(r => r.Wipes),
+                AverageRaidTimeMinutes = g.Average(r => (double)r.TotalTime / 60.0)
             })
-            .OrderByDescending(x => x.AverageDps)
-            .Skip((int)(await _context.PlayerEncounters
-                .Include(pe => pe.Encounter)
-                .Where(pe => pe.Role == "3" && pe.Encounter.EncounterEntry != "33113")
-                .Select(pe => pe.PlayerId)
-                .Distinct()
-                .CountAsync(cancellationToken) * 0.2))
-            .Select(x => (double?)x.AverageDps)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var thresholdValue = topDamageDealersThreshold ?? 0.0;
+        var totalBossKills = raidStats?.TotalBossKills ?? 0;
+        var totalWipes = raidStats?.TotalWipes ?? 0;
+        var averageRaidTimeMinutes = raidStats?.AverageRaidTimeMinutes ?? 0;
 
-        var topDamageDealerPlayerIds = await _context.PlayerEncounters
-            .Include(pe => pe.Encounter)
-            .Where(pe => pe.Role == "3" && pe.Encounter.EncounterEntry != "33113")
-            .GroupBy(pe => pe.PlayerId)
-            .Select(g => new
-            {
-                PlayerId = g.Key,
-                AverageDps = g.Average(pe => pe.Dps)
-            })
-            .Where(x => x.AverageDps >= thresholdValue)
-            .Select(x => x.PlayerId)
-            .ToListAsync(cancellationToken);
+        var speedBonus = averageRaidTimeMinutes > 0 
+            ? Math.Max(0, 300 - averageRaidTimeMinutes) / 10.0 
+            : 0;
 
-        var topDamageDealersCount = await _context.GuildMembers
-            .Where(gm => gm.GuildId == guild.Id && topDamageDealerPlayerIds.Contains(gm.PlayerId))
-            .Select(gm => gm.PlayerId)
-            .Distinct()
-            .CountAsync(cancellationToken);
-
-        var rating = (fullRaidsCount * 10.0) + (uniqueLeadersCount * 5.0) + (topDamageDealersCount * 3.0);
+        var rating = (fullRaidsCount * 20.0) 
+                   + (totalBossKills * 2.0) 
+                   + speedBonus 
+                   - (totalWipes * 3.0);
 
         return new GuildDetailDto
         {
@@ -264,8 +217,8 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
             CreateDate = null,
             FullRaidsCount = fullRaidsCount,
             TotalRaidsCount = totalRaidsCount,
-            UniqueRaidLeadersCount = uniqueLeadersCount,
-            TopDamageDealersCount = topDamageDealersCount,
+            UniqueRaidLeadersCount = 0,
+            TopDamageDealersCount = 0,
             TotalEncountersCount = totalEncountersCount,
             Rating = rating
         };
@@ -741,23 +694,18 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
 
         var encounters = await _context.Encounters
             .Include(e => e.Raid)
-            .Where(e => e.Raid.GuildName == guild.GuildName && !string.IsNullOrWhiteSpace(e.EncounterName))
-            .Select(e => new
-            {
-                e.EncounterEntry,
-                e.EncounterName,
-                e.Success,
-                e.StartTime,
-                e.EndTime
-            })
+            .Where(e => e.Raid.GuildName == guild.GuildName && !string.IsNullOrWhiteSpace(e.EncounterEntry))
             .ToListAsync(cancellationToken);
+
+        if (encounters.Count == 0)
+            return [];
 
         var bossStats = encounters
             .GroupBy(e => new { e.EncounterEntry, e.EncounterName })
             .Select(g => new GuildBossStatisticsDto
             {
                 EncounterEntry = g.Key.EncounterEntry ?? "",
-                EncounterName = g.Key.EncounterName ?? "",
+                EncounterName = !string.IsNullOrWhiteSpace(g.Key.EncounterName) ? g.Key.EncounterName : g.Key.EncounterEntry ?? "",
                 TotalAttempts = g.Count(),
                 SuccessfulAttempts = g.Count(e => e.Success),
                 SuccessRate = g.Count() > 0 ? (double)g.Count(e => e.Success) / g.Count() * 100.0 : 0.0,

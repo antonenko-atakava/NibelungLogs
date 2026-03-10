@@ -12,6 +12,7 @@ import { GuildTopPlayersChart } from "@/components/guilds/detail/GuildTopPlayers
 import { GuildProgressChart } from "@/components/guilds/detail/GuildProgressChart";
 import { GuildRaidStatistics } from "@/components/guilds/detail/GuildRaidStatistics";
 import { GuildBossStatistics } from "@/components/guilds/detail/GuildBossStatistics";
+import { GuildRaidsHistory } from "@/components/guilds/detail/GuildRaidsHistory";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { ArrowLeft, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -123,6 +124,10 @@ export default function GuildDetailPage() {
       </Button>
 
       <GuildHeader guild={guild} />
+
+      <div className="mt-8">
+        <GuildRaidsHistory guildId={guildId} guildName={guild.guildName} />
+      </div>
 
       <div className="mt-8">
         <GuildRaidStatistics guildId={guildId} />
