@@ -37,6 +37,8 @@ export interface GetPlayersByClassParams {
   encounterName?: string;
   role?: string;
   search?: string;
+  sortField?: string;
+  sortDirection?: "asc" | "desc";
   page?: number;
   pageSize?: number;
 }

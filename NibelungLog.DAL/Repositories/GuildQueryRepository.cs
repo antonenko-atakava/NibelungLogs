@@ -87,35 +87,7 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
             .Select(g => new { GuildName = g.Key, Count = g.Select(gm => gm.PlayerId).Distinct().Count() })
             .ToDictionaryAsync(x => x.GuildName, x => x.Count, cancellationToken);
 
-        var query = guildQuery;
-
-        if (!string.IsNullOrWhiteSpace(sortField))
-        {
-            query = sortField.ToLower() switch
-            {
-                "guildname" => sortDirection?.ToLower() == "asc"
-                    ? query.OrderBy(g => g.GuildName)
-                    : query.OrderByDescending(g => g.GuildName),
-                "memberscount" => sortDirection?.ToLower() == "asc"
-                    ? query.OrderBy(g => g.Members.Count)
-                    : query.OrderByDescending(g => g.Members.Count),
-                "lastupdated" => sortDirection?.ToLower() == "asc"
-                    ? query.OrderBy(g => g.LastUpdated)
-                    : query.OrderByDescending(g => g.LastUpdated),
-                "rating" => sortDirection?.ToLower() == "asc"
-                    ? query.OrderBy(g => g.GuildName)
-                    : query.OrderByDescending(g => g.GuildName),
-                _ => query.OrderByDescending(g => g.Members.Count)
-            };
-        }
-        else
-        {
-            query = query.OrderByDescending(g => g.GuildName);
-        }
-
-        var guildsData = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        var guildsData = await guildQuery
             .Select(g => new
             {
                 g.Id,
@@ -131,7 +103,7 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
             })
             .ToListAsync(cancellationToken);
 
-        var guilds = guildsData.Select(g =>
+        var allGuilds = guildsData.Select(g =>
         {
             var leader = g.Members
                 .Where(m => !string.IsNullOrWhiteSpace(m.Rank))
@@ -165,12 +137,30 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
             };
         }).ToList();
 
-        if (string.IsNullOrWhiteSpace(sortField) || sortField.ToLower() == "rating")
-        {
-            guilds = sortDirection?.ToLower() == "asc"
-                ? guilds.OrderBy(g => g.Rating).ToList()
-                : guilds.OrderByDescending(g => g.Rating).ToList();
-        }
+        var isAsc = sortDirection?.ToLower() == "asc";
+        var sortedGuilds = !string.IsNullOrWhiteSpace(sortField)
+            ? sortField.ToLower() switch
+            {
+                "guildname" => isAsc
+                    ? allGuilds.OrderBy(g => g.GuildName).ToList()
+                    : allGuilds.OrderByDescending(g => g.GuildName).ToList(),
+                "memberscount" => isAsc
+                    ? allGuilds.OrderBy(g => g.MembersCount).ToList()
+                    : allGuilds.OrderByDescending(g => g.MembersCount).ToList(),
+                "lastupdated" => isAsc
+                    ? allGuilds.OrderBy(g => g.LastUpdated).ToList()
+                    : allGuilds.OrderByDescending(g => g.LastUpdated).ToList(),
+                "rating" => isAsc
+                    ? allGuilds.OrderBy(g => g.Rating).ToList()
+                    : allGuilds.OrderByDescending(g => g.Rating).ToList(),
+                _ => allGuilds.OrderByDescending(g => g.Rating).ToList()
+            }
+            : allGuilds.OrderByDescending(g => g.Rating).ToList();
+
+        var guilds = sortedGuilds
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
 
         return new PagedResult<GuildDto>
         {

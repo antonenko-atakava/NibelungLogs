@@ -44,12 +44,14 @@ public sealed class PlayerQueryService : IPlayerQueryService
         string? encounterName,
         string? role,
         string? search,
+        string? sortField,
+        string? sortDirection,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
         return await _repository.GetPlayersByClassAsync(
-            characterClass, spec, encounterEntry, encounterName, role, search, page, pageSize, cancellationToken);
+            characterClass, spec, encounterEntry, encounterName, role, search, sortField, sortDirection, page, pageSize, cancellationToken);
     }
 
     public async Task<PagedResult<PlayerDto>> GetPlayersByEncounterAsync(

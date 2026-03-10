@@ -26,6 +26,8 @@ public interface IPlayerQueryRepository
         string? encounterName,
         string? role,
         string? search,
+        string? sortField,
+        string? sortDirection,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);

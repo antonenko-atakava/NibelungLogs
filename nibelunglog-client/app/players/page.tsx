@@ -43,6 +43,8 @@ export default function PlayersPage() {
             spec: specId || undefined,
             search: filters.search,
             role: filters.role,
+            sortField: filters.sortField,
+            sortDirection: filters.sortDirection,
             page: filters.page,
             pageSize: filters.pageSize,
           });

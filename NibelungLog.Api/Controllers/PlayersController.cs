@@ -53,7 +53,7 @@ public sealed class PlayersController : ControllerBase
     {
         var result = await _playerQueryService.GetPlayersByClassAsync(
             query.CharacterClass, query.Spec, query.EncounterEntry, query.EncounterName,
-            query.Role, query.Search, query.Page, query.PageSize, cancellationToken);
+            query.Role, query.Search, query.SortField, query.SortDirection, query.Page, query.PageSize, cancellationToken);
         
         return Ok(result);
     }

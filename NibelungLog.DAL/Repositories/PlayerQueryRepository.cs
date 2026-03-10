@@ -97,15 +97,21 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                     ? g.Where(pe => pe.EncounterEntry != "33113").Max(pe => pe.Dps)
                     : 0,
                 BestEncounter = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault()
+                    ? g.Where(pe => pe.EncounterEntry != "33113")
+                          .OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                          .FirstOrDefault()
+                      ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                          .FirstOrDefault()
                     : g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Dps).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault(),
+                      ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault(),
                 BestSpecName = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? (g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault())?.Name ?? ""
+                    ? (g.Where(pe => pe.EncounterEntry != "33113")
+                           .OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                           .FirstOrDefault()
+                       ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                           .FirstOrDefault())?.Name ?? ""
                     : (g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Dps).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault())?.Name ?? "",
+                       ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault())?.Name ?? "",
                 TotalEncounters = g.Count(),
                 TotalDamage = g.Sum(pe => pe.DamageDone),
                 TotalHealing = g.Sum(pe => pe.HealingDone),
@@ -124,59 +130,64 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                     : 0
             });
 
-        var orderedQuery = grouped.AsQueryable();
+        var allGrouped = grouped.ToList();
 
-        if (!string.IsNullOrWhiteSpace(sortField))
+        var filteredGrouped = allGrouped.Where(p =>
         {
-            var isAsc = sortDirection?.ToLower() == "asc";
-            orderedQuery = sortField.ToLower() switch
+            if (itemLevelMin.HasValue || itemLevelMax.HasValue)
             {
-                "averagedps" => isAsc ? orderedQuery.OrderBy(p => p.AverageDps) : orderedQuery.OrderByDescending(p => p.AverageDps),
-                "maxdps" => isAsc ? orderedQuery.OrderBy(p => p.BestDps) : orderedQuery.OrderByDescending(p => p.BestDps),
-                "averagehps" => isAsc ? orderedQuery.OrderBy(p => p.AverageHps) : orderedQuery.OrderByDescending(p => p.AverageHps),
-                "maxhps" => isAsc ? orderedQuery.OrderBy(p => p.MaxHps) : orderedQuery.OrderByDescending(p => p.MaxHps),
-                "totalencounters" => isAsc ? orderedQuery.OrderBy(p => p.TotalEncounters) : orderedQuery.OrderByDescending(p => p.TotalEncounters),
-                _ => !string.IsNullOrWhiteSpace(role) && role == "2" 
-                    ? orderedQuery.OrderByDescending(p => p.BestEncounter != null && p.BestEncounter.Duration > 0 ? (double)p.TotalHealing / p.BestEncounter.Duration : 0)
-                    : orderedQuery.OrderByDescending(p => p.AverageDps)
-            };
-        }
-        else
-        {
-            orderedQuery = !string.IsNullOrWhiteSpace(role) && role == "2" 
-                ? orderedQuery.OrderByDescending(p => p.BestEncounter != null && p.BestEncounter.Duration > 0 ? (double)p.TotalHealing / p.BestEncounter.Duration : 0)
-                : orderedQuery.OrderByDescending(p => p.AverageDps);
-        }
+                if (p.BestEncounter == null || string.IsNullOrWhiteSpace(p.BestEncounter.MaxGearScore))
+                    return false;
 
-        var filteredQuery = orderedQuery;
+                if (!double.TryParse(p.BestEncounter.MaxGearScore, out var itemLevel))
+                    return false;
 
-        if (itemLevelMin.HasValue || itemLevelMax.HasValue)
-        {
-            var filteredList = orderedQuery.ToList()
-                .Where(p =>
-                {
-                    if (p.BestEncounter == null || string.IsNullOrWhiteSpace(p.BestEncounter.MaxGearScore))
-                        return false;
-                    
-                    if (!double.TryParse(p.BestEncounter.MaxGearScore, out var itemLevel))
-                        return false;
-                    
-                    if (itemLevelMin.HasValue && itemLevel < itemLevelMin.Value)
-                        return false;
-                    
-                    if (itemLevelMax.HasValue && itemLevel > itemLevelMax.Value)
-                        return false;
-                    
-                    return true;
-                })
-                .ToList();
-            
-            filteredQuery = filteredList.AsQueryable();
-        }
+                if (itemLevelMin.HasValue && itemLevel < itemLevelMin.Value)
+                    return false;
 
-        var totalCount = filteredQuery.Count();
+                if (itemLevelMax.HasValue && itemLevel > itemLevelMax.Value)
+                    return false;
+            }
 
-        var pagedGrouped = filteredQuery
+            return true;
+        }).ToList();
+
+        var isAsc = sortDirection?.ToLower() == "asc";
+        var sortedGrouped = !string.IsNullOrWhiteSpace(sortField)
+            ? sortField.ToLower() switch
+            {
+                "averagedps" => isAsc
+                    ? filteredGrouped.OrderBy(p => p.AverageDps).ToList()
+                    : filteredGrouped.OrderByDescending(p => p.AverageDps).ToList(),
+                "maxdps" => isAsc
+                    ? filteredGrouped.OrderBy(p => p.BestDps).ToList()
+                    : filteredGrouped.OrderByDescending(p => p.BestDps).ToList(),
+                "averagehps" => isAsc
+                    ? filteredGrouped.OrderBy(p => p.AverageHps).ToList()
+                    : filteredGrouped.OrderByDescending(p => p.AverageHps).ToList(),
+                "maxhps" => isAsc
+                    ? filteredGrouped.OrderBy(p => p.MaxHps).ToList()
+                    : filteredGrouped.OrderByDescending(p => p.MaxHps).ToList(),
+                "totalencounters" => isAsc
+                    ? filteredGrouped.OrderBy(p => p.TotalEncounters).ToList()
+                    : filteredGrouped.OrderByDescending(p => p.TotalEncounters).ToList(),
+                _ => !string.IsNullOrWhiteSpace(role) && role == "2"
+                    ? filteredGrouped.OrderByDescending(p =>
+                        p.BestEncounter != null && p.BestEncounter.Duration > 0
+                            ? (double)p.TotalHealing / p.BestEncounter.Duration
+                            : 0).ToList()
+                    : filteredGrouped.OrderByDescending(p => p.AverageDps).ToList()
+            }
+            : !string.IsNullOrWhiteSpace(role) && role == "2"
+                ? filteredGrouped.OrderByDescending(p =>
+                    p.BestEncounter != null && p.BestEncounter.Duration > 0
+                        ? (double)p.TotalHealing / p.BestEncounter.Duration
+                        : 0).ToList()
+                : filteredGrouped.OrderByDescending(p => p.AverageDps).ToList();
+
+        var totalCount = sortedGrouped.Count;
+
+        var pagedGrouped = sortedGrouped
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
@@ -204,7 +215,7 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             Role = p.BestEncounter?.Role,
             MaxHps = p.MaxHps > 0 ? p.MaxHps : null
         }).ToList();
-        
+
         for (var i = 0; i < players.Count; i++)
         {
             players[i].Rank = (page - 1) * pageSize + i + 1;
@@ -263,6 +274,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         string? encounterName,
         string? role,
         string? search,
+        string? sortField,
+        string? sortDirection,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -283,7 +296,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             query = query.Where(pe => pe.Encounter.EncounterEntry == encounterEntry);
 
         if (!string.IsNullOrWhiteSpace(encounterName))
-            query = query.Where(pe => pe.Encounter.EncounterName != null && pe.Encounter.EncounterName.Contains(encounterName));
+            query = query.Where(pe =>
+                pe.Encounter.EncounterName != null && pe.Encounter.EncounterName.Contains(encounterName));
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(pe => pe.Player.CharacterName.Contains(search));
@@ -334,15 +348,21 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                     ? g.Where(pe => pe.EncounterEntry != "33113").Max(pe => pe.Dps)
                     : 0,
                 BestEncounter = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault()
+                    ? g.Where(pe => pe.EncounterEntry != "33113")
+                          .OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                          .FirstOrDefault()
+                      ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                          .FirstOrDefault()
                     : g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Dps).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault(),
+                      ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault(),
                 BestSpecName = !string.IsNullOrWhiteSpace(role) && role == "2"
-                    ? (g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0).FirstOrDefault())?.SpecName ?? ""
+                    ? (g.Where(pe => pe.EncounterEntry != "33113")
+                           .OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                           .FirstOrDefault()
+                       ?? g.OrderByDescending(pe => pe.Duration > 0 ? (double)pe.HealingDone / pe.Duration : 0)
+                           .FirstOrDefault())?.SpecName ?? ""
                     : (g.Where(pe => pe.EncounterEntry != "33113").OrderByDescending(pe => pe.Dps).FirstOrDefault()
-                    ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault())?.SpecName ?? "",
+                       ?? g.OrderByDescending(pe => pe.Dps).FirstOrDefault())?.SpecName ?? "",
                 TotalEncounters = g.Count(),
                 TotalDamage = g.Sum(pe => pe.DamageDone),
                 TotalHealing = g.Sum(pe => pe.HealingDone),
@@ -359,19 +379,50 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                         .Select(pe => (double)pe.HealingDone / pe.Duration)
                         .Max()
                     : 0
-            })
-            .OrderByDescending(p => !string.IsNullOrWhiteSpace(role) && role == "2" 
-                ? (p.BestEncounter != null && p.BestEncounter.Duration > 0 ? (double)p.TotalHealing / p.BestEncounter.Duration : 0)
-                : p.AverageDps)
+            });
+        var allGrouped = grouped.ToList();
+
+        var isAsc = sortDirection?.ToLower() == "asc";
+        var sortedGrouped = !string.IsNullOrWhiteSpace(sortField)
+            ? sortField.ToLower() switch
+            {
+                "averagedps" => isAsc
+                    ? allGrouped.OrderBy(p => p.AverageDps).ToList()
+                    : allGrouped.OrderByDescending(p => p.AverageDps).ToList(),
+                "maxdps" => isAsc
+                    ? allGrouped.OrderBy(p => p.BestDps).ToList()
+                    : allGrouped.OrderByDescending(p => p.BestDps).ToList(),
+                "averagehps" => isAsc
+                    ? allGrouped.OrderBy(p => p.AverageHps).ToList()
+                    : allGrouped.OrderByDescending(p => p.AverageHps).ToList(),
+                "maxhps" => isAsc
+                    ? allGrouped.OrderBy(p => p.MaxHps).ToList()
+                    : allGrouped.OrderByDescending(p => p.MaxHps).ToList(),
+                "totalencounters" => isAsc
+                    ? allGrouped.OrderBy(p => p.TotalEncounters).ToList()
+                    : allGrouped.OrderByDescending(p => p.TotalEncounters).ToList(),
+                _ => !string.IsNullOrWhiteSpace(role) && role == "2"
+                    ? allGrouped.OrderByDescending(p =>
+                        p.BestEncounter != null && p.BestEncounter.Duration > 0
+                            ? (double)p.TotalHealing / p.BestEncounter.Duration
+                            : 0).ToList()
+                    : allGrouped.OrderByDescending(p => p.AverageDps).ToList()
+            }
+            : !string.IsNullOrWhiteSpace(role) && role == "2"
+                ? allGrouped.OrderByDescending(p =>
+                    p.BestEncounter != null && p.BestEncounter.Duration > 0
+                        ? (double)p.TotalHealing / p.BestEncounter.Duration
+                        : 0).ToList()
+                : allGrouped.OrderByDescending(p => p.AverageDps).ToList();
+
+        var totalCount = sortedGrouped.Count;
+
+        var pagedGrouped = sortedGrouped
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
 
-        var totalCount = playerEncounters
-            .GroupBy(pe => pe.PlayerId)
-            .Count();
-
-        var players = grouped.Select((p, index) => new PlayerDto
+        var players = pagedGrouped.Select((p, index) => new PlayerDto
         {
             Id = p.PlayerId,
             CharacterName = p.CharacterName,
@@ -395,8 +446,6 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             MaxHps = p.MaxHps > 0 ? p.MaxHps : null
         }).ToList();
 
-        players = players.OrderByDescending(p => p.Role == "2" && p.MaxHps.HasValue ? p.MaxHps.Value : p.MaxDps).ToList();
-        
         for (var i = 0; i < players.Count; i++)
         {
             players[i].Rank = (page - 1) * pageSize + i + 1;
@@ -429,7 +478,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(encounterName))
-            query = query.Where(pe => pe.Encounter.EncounterName != null && pe.Encounter.EncounterName == encounterName);
+            query = query.Where(pe =>
+                pe.Encounter.EncounterName != null && pe.Encounter.EncounterName == encounterName);
 
         if (!string.IsNullOrWhiteSpace(encounterEntry))
             query = query.Where(pe => pe.Encounter.EncounterEntry == encounterEntry);
@@ -448,7 +498,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         var playerEncounters = await query
             .OrderByDescending(pe => pe.Role == "2"
                 ? (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds > 0
-                    ? (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
+                    ? (double)(pe.HealingDone + pe.AbsorbProvided) /
+                      (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
                     : 0
                 : pe.Dps)
             .ThenByDescending(pe => pe.DamageDone)
@@ -513,7 +564,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         };
     }
 
-    public async Task<PlayerExtendedDetailDto?> GetPlayerExtendedDetailAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<PlayerExtendedDetailDto?> GetPlayerExtendedDetailAsync(int id,
+        CancellationToken cancellationToken = default)
     {
         var player = await _context.Players
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
@@ -544,8 +596,12 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             .Select(pe => pe.Dps)
             .ToList();
         var hpsValues = playerEncounters
-            .Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime && pe.Encounter.EncounterEntry != "33113")
-            .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+            .Where(pe =>
+                pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime &&
+                pe.Encounter.EncounterEntry != "33113")
+            .Select(pe =>
+                (double)(pe.HealingDone + pe.AbsorbProvided) /
+                (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
             .ToList();
 
         var specStats = playerEncounters
@@ -560,12 +616,20 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                 MaxDps = g.Where(pe => pe.Encounter.EncounterEntry != "33113").Any()
                     ? g.Where(pe => pe.Encounter.EncounterEntry != "33113").Max(pe => pe.Dps)
                     : (g.Any() ? g.Max(pe => pe.Dps) : 0),
-                AverageHps = g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime && pe.Encounter.EncounterEntry != "33113")
-                    .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                AverageHps = g.Where(pe =>
+                        pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime &&
+                        pe.Encounter.EncounterEntry != "33113")
+                    .Select(pe =>
+                        (double)(pe.HealingDone + pe.AbsorbProvided) /
+                        (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
                     .DefaultIfEmpty(0)
                     .Average(),
-                MaxHps = g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime && pe.Encounter.EncounterEntry != "33113")
-                    .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                MaxHps = g.Where(pe =>
+                        pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime &&
+                        pe.Encounter.EncounterEntry != "33113")
+                    .Select(pe =>
+                        (double)(pe.HealingDone + pe.AbsorbProvided) /
+                        (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
                     .DefaultIfEmpty(0)
                     .Max()
             })
@@ -583,12 +647,20 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                 MaxDps = g.Where(pe => pe.Encounter.EncounterEntry != "33113").Any()
                     ? g.Where(pe => pe.Encounter.EncounterEntry != "33113").Max(pe => pe.Dps)
                     : (g.Any() ? g.Max(pe => pe.Dps) : 0),
-                AverageHps = g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime && pe.Encounter.EncounterEntry != "33113")
-                    .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                AverageHps = g.Where(pe =>
+                        pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime &&
+                        pe.Encounter.EncounterEntry != "33113")
+                    .Select(pe =>
+                        (double)(pe.HealingDone + pe.AbsorbProvided) /
+                        (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
                     .DefaultIfEmpty(0)
                     .Average(),
-                MaxHps = g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime && pe.Encounter.EncounterEntry != "33113")
-                    .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                MaxHps = g.Where(pe =>
+                        pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime &&
+                        pe.Encounter.EncounterEntry != "33113")
+                    .Select(pe =>
+                        (double)(pe.HealingDone + pe.AbsorbProvided) /
+                        (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
                     .DefaultIfEmpty(0)
                     .Max()
             })
@@ -647,13 +719,14 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         var query = _context.PlayerEncounters
             .Include(pe => pe.Player)
             .Include(pe => pe.Encounter)
-                .ThenInclude(e => e.Raid)
-                    .ThenInclude(r => r.RaidType)
+            .ThenInclude(e => e.Raid)
+            .ThenInclude(r => r.RaidType)
             .Include(pe => pe.CharacterSpec)
             .Where(pe => pe.PlayerId == playerId);
 
         if (!string.IsNullOrWhiteSpace(encounterName))
-            query = query.Where(pe => pe.Encounter.EncounterName != null && pe.Encounter.EncounterName.Contains(encounterName));
+            query = query.Where(pe =>
+                pe.Encounter.EncounterName != null && pe.Encounter.EncounterName.Contains(encounterName));
 
         if (!string.IsNullOrWhiteSpace(specName))
             query = query.Where(pe => pe.CharacterSpec.Name == specName);
@@ -694,7 +767,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                 AbsorbProvided = pe.AbsorbProvided,
                 Dps = pe.Dps,
                 Hps = pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime
-                    ? (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
+                    ? (double)(pe.HealingDone + pe.AbsorbProvided) /
+                      (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
                     : null,
                 ItemLevel = pe.MaxGearScore,
                 RaidId = pe.Encounter.RaidId,
@@ -735,7 +809,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                 Success = pe.Encounter.Success,
                 Dps = pe.Dps,
                 Hps = pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime
-                    ? (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
+                    ? (double)(pe.HealingDone + pe.AbsorbProvided) /
+                      (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds
                     : null,
                 DamageDone = pe.DamageDone,
                 HealingDone = pe.HealingDone,
@@ -755,8 +830,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
     {
         var query = _context.PlayerEncounters
             .Include(pe => pe.Encounter)
-                .ThenInclude(e => e.Raid)
-                    .ThenInclude(r => r.RaidType)
+            .ThenInclude(e => e.Raid)
+            .ThenInclude(r => r.RaidType)
             .Where(pe => pe.PlayerId == playerId);
 
         if (raidTypeId.HasValue)
@@ -792,13 +867,13 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
         var playerEncountersQuery = _context.PlayerEncounters
             .Include(pe => pe.CharacterSpec)
             .Include(pe => pe.Encounter)
-                .ThenInclude(e => e.Raid)
-                    .ThenInclude(r => r.RaidType)
+            .ThenInclude(e => e.Raid)
+            .ThenInclude(r => r.RaidType)
             .Include(pe => pe.Player)
-            .Where(pe => pe.CharacterSpec.Name == specName 
-                && pe.Player.CharacterClass == player.CharacterClass 
-                && pe.Encounter.Success == true 
-                && pe.Encounter.EncounterEntry != "33113");
+            .Where(pe => pe.CharacterSpec.Name == specName
+                         && pe.Player.CharacterClass == player.CharacterClass
+                         && pe.Encounter.Success == true
+                         && pe.Encounter.EncounterEntry != "33113");
 
         if (raidTypeId.HasValue)
         {
@@ -811,7 +886,7 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             return null;
 
         var isHealerSpec = playerEncounters.Any(pe => pe.Role == "2");
-        
+
         if (isHealerSpec)
         {
             playerEncounters = playerEncounters.Where(pe => pe.Role == "2").ToList();
@@ -826,19 +901,25 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                 ClassName = g.First().Player.ClassName,
                 AverageDps = g.Average(pe => pe.Dps),
                 MaxDps = g.Max(pe => pe.Dps),
-                AverageHps = isHealerSpec && g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime).Any()
+                AverageHps = isHealerSpec &&
+                             g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime).Any()
                     ? g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime)
-                        .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                        .Select(pe =>
+                            (double)(pe.HealingDone + pe.AbsorbProvided) /
+                            (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
                         .Average()
                     : 0.0,
-                MaxHps = isHealerSpec && g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime).Any()
+                MaxHps = isHealerSpec && g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime)
+                    .Any()
                     ? g.Where(pe => pe.Role == "2" && pe.Encounter.EndTime > pe.Encounter.StartTime)
-                        .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
+                        .Select(pe =>
+                            (double)(pe.HealingDone + pe.AbsorbProvided) /
+                            (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds)
                         .Max()
                     : 0.0,
                 IsCurrentPlayer = g.Key == playerId
             })
-            .OrderByDescending(s => isHealerSpec 
+            .OrderByDescending(s => isHealerSpec
                 ? (useAverageDps ? s.AverageHps : s.MaxHps)
                 : (useAverageDps ? s.AverageDps : s.MaxDps))
             .Select((s, index) => new
@@ -913,7 +994,7 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             .ToList();
 
         var playersToAdd = totalResultPlayers - 1;
-        
+
         if (!isTopPlayerCurrent && !contextPlayers.Any(cp => cp.IsCurrentPlayer))
         {
             var currentPlayerInStats = playerStats.FirstOrDefault(s => s.IsCurrentPlayer);
@@ -929,7 +1010,7 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
                 .Where(s => s.PlayerId != topPlayerId && !contextPlayers.Any(cp => cp.PlayerId == s.PlayerId))
                 .Take(playersToAdd - contextPlayers.Count)
                 .ToList();
-            
+
             contextPlayers = contextPlayers
                 .Concat(additionalPlayers)
                 .OrderByDescending(s => isHealerSpec

@@ -72,6 +72,10 @@ class PlayersApi implements IPlayersApi {
       searchParams.append("role", params.role);
     if (params.search)
       searchParams.append("search", params.search);
+    if (params.sortField)
+      searchParams.append("sortField", params.sortField);
+    if (params.sortDirection)
+      searchParams.append("sortDirection", params.sortDirection);
     if (params.page)
       searchParams.append("page", params.page.toString());
     if (params.pageSize)
