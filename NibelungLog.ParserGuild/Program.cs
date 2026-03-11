@@ -39,7 +39,7 @@ public sealed class Program
             });
 
         var postgresConnectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-            ?? "Host=localhost;Port=5432;Database=nibelunglog;Username=postgres;Password=1234";
+            ?? "Host=localhost;Port=5432;Database=nibelunglog;Username=postgres;Password=password";
 
         serviceCollection.AddDbContext<ApplicationDbContext>(
             options => options.UseNpgsql(postgresConnectionString));

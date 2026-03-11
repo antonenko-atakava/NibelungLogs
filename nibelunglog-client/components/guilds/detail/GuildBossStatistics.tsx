@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { guildsApi } from "@/utils/api/guildsApi";
 import { ApiErrorHandler } from "@/utils/api/errorHandler";
+import { getEncounterName } from "@/utils/wow/encounterMappings";
 import { Target, CheckCircle, XCircle, Clock } from "lucide-react";
 import type { GuildBossStatisticsDto } from "@/types/api/Guild";
 
@@ -122,7 +123,7 @@ export function GuildBossStatistics({ guildId }: GuildBossStatisticsProps) {
             {statistics.map((boss, index) => (
               <TableRow key={boss.encounterEntry}>
                 <TableCell className="font-medium">
-                  {boss.encounterName}
+                  {getEncounterName(boss.encounterEntry)}
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex items-center justify-center gap-1">

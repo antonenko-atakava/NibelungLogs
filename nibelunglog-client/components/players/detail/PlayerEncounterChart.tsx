@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { playersApi } from "@/utils/api/playersApi";
 import { raidTypesApi } from "@/utils/api/raidTypesApi";
 import { ApiErrorHandler } from "@/utils/api/errorHandler";
+import { getEncounterName } from "@/utils/wow/encounterMappings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -359,7 +360,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
         const encounter = encountersByTime.get(timeKey) || comparisonEncountersByTime.get(timeKey);
         if (!encounter)
           return "";
-        const name = encounter.encounterName;
+        const name = getEncounterName(encounter.encounterEntry);
         return name.length > 25 ? name.substring(0, 25) + "..." : name;
       });
 
@@ -750,7 +751,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
                 <SelectItem value="all">Все энкаунтеры</SelectItem>
                 {uniqueEncounters.map((encounter) => (
                   <SelectItem key={encounter.encounterEntry} value={encounter.encounterName}>
-                    {encounter.encounterName}
+                    {getEncounterName(encounter.encounterEntry)}
                   </SelectItem>
                 ))}
               </SelectContent>

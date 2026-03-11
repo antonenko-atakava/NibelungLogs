@@ -18,6 +18,7 @@ import { raidTypesApi } from "@/utils/api/raidTypesApi";
 import { ApiErrorHandler } from "@/utils/api/errorHandler";
 import { getClassColor, getClassColorWithOpacity } from "@/utils/wow/classColors";
 import { getClassId } from "@/utils/wow/classMappings";
+import { getEncounterName } from "@/utils/wow/encounterMappings";
 import type { GuildMemberDto } from "@/types/api/Guild";
 import type { RaidTypeDto } from "@/types/api/RaidType";
 import type { EncounterListItemDto } from "@/types/api/Encounter";
@@ -435,8 +436,8 @@ export function GuildTopPlayersChart({ guildId }: GuildTopPlayersChartProps) {
               <SelectContent>
                 <SelectItem value="all">Все боссы</SelectItem>
                 {uniqueEncounters.map((encounter) => (
-                  <SelectItem key={encounter.encounterName} value={encounter.encounterName}>
-                    {encounter.encounterName}
+                  <SelectItem key={encounter.encounterEntry} value={encounter.encounterName}>
+                    {getEncounterName(encounter.encounterEntry)}
                   </SelectItem>
                 ))}
               </SelectContent>

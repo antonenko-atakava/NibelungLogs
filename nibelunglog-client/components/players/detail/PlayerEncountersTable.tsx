@@ -26,6 +26,7 @@ import { RoleBadge } from "@/components/wow/RoleBadge";
 import { SpecBadge } from "@/components/wow/SpecBadge";
 import { getSpecIcon } from "@/utils/wow/specIcons";
 import { raidTypesApi } from "@/utils/api/raidTypesApi";
+import { getEncounterName } from "@/utils/wow/encounterMappings";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, XCircle, Clock, Filter } from "lucide-react";
@@ -264,7 +265,7 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
                               href={`/encounters/${encounter.encounterId}`}
                               className="font-medium hover:text-primary transition-colors"
                             >
-                              {encounter.encounterName}
+                              {getEncounterName(encounter.encounterEntry)}
                             </Link>
                           </TableCell>
                           <TableCell>
@@ -429,7 +430,7 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
                 <SelectItem value="all">Все энкаунтеры</SelectItem>
                 {uniqueEncounters.map((encounter) => (
                   <SelectItem key={encounter.encounterEntry} value={encounter.encounterName}>
-                    {encounter.encounterName}
+                    {getEncounterName(encounter.encounterEntry)}
                   </SelectItem>
                 ))}
               </SelectContent>
