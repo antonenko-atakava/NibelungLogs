@@ -40,7 +40,7 @@ interface PlayerEncountersTableProps {
 
 export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) {
   const [filters, setFilters] = useState({
-    encounterName: "",
+    encounterEntry: "",
     specName: "",
     role: "",
     success: undefined as boolean | undefined,
@@ -62,7 +62,7 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
   const [localRole, setLocalRole] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<boolean | undefined>(undefined);
   const [localRaidTypeId, setLocalRaidTypeId] = useState<number | null>(null);
-  const [localEncounterName, setLocalEncounterName] = useState<string | null>(null);
+  const [localEncounterEntry, setLocalEncounterEntry] = useState<string | null>(null);
   const [localStartDate, setLocalStartDate] = useState<string>("");
   const [localEndDate, setLocalEndDate] = useState<string>("");
 
@@ -84,8 +84,8 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
       try {
         const encounters = await playersApi.getPlayerUniqueEncounters(playerId, localRaidTypeId);
         setUniqueEncounters(encounters);
-        if (localEncounterName && !encounters.some(e => e.encounterName === localEncounterName)) {
-          setLocalEncounterName(null);
+        if (localEncounterEntry && !encounters.some(e => e.encounterEntry === localEncounterEntry)) {
+          setLocalEncounterEntry(null);
         }
       } catch (err) {
         console.error("Failed to load unique encounters:", err);
@@ -106,7 +106,7 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
 
         const result = await playersApi.getPlayerEncounters({
           playerId,
-          encounterName: filters.encounterName || undefined,
+          encounterEntry: filters.encounterEntry || undefined,
           specName: filters.specName || undefined,
           role: filters.role || undefined,
           success: filters.success,
@@ -155,7 +155,7 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
       role: localRole || "",
       success: localSuccess,
       raidTypeId: localRaidTypeId,
-      encounterName: localEncounterName || "",
+      encounterEntry: localEncounterEntry || "",
       startDate: localStartDate || null,
       endDate: localEndDate || null,
       page: 1,
@@ -177,7 +177,7 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
       role: "",
       success: undefined,
       raidTypeId: null,
-      encounterName: "",
+      encounterEntry: "",
       startDate: null,
       endDate: null,
       page: 1,
@@ -190,7 +190,7 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
       setLocalRole(filters.role || null);
       setLocalSuccess(filters.success);
       setLocalRaidTypeId(filters.raidTypeId);
-      setLocalEncounterName(filters.encounterName || null);
+      setLocalEncounterEntry(filters.encounterEntry || null);
       setLocalStartDate(filters.startDate || "");
       setLocalEndDate(filters.endDate || "");
     }
@@ -422,14 +422,14 @@ export function PlayerEncountersTable({ playerId }: PlayerEncountersTableProps) 
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Энкаунтер</label>
-            <Select value={localEncounterName || "all"} onValueChange={(value) => setLocalEncounterName(value === "all" ? null : value)}>
+            <Select value={localEncounterEntry || "all"} onValueChange={(value) => setLocalEncounterEntry(value === "all" ? null : value)}>
               <SelectTrigger className="h-10 w-full">
                 <SelectValue placeholder="Все энкаунтеры" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Все энкаунтеры</SelectItem>
                 {uniqueEncounters.map((encounter) => (
-                  <SelectItem key={encounter.encounterEntry} value={encounter.encounterName}>
+                  <SelectItem key={encounter.encounterEntry} value={encounter.encounterEntry}>
                     {getEncounterName(encounter.encounterEntry)}
                   </SelectItem>
                 ))}

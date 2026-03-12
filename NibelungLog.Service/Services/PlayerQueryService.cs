@@ -75,7 +75,7 @@ public sealed class PlayerQueryService : IPlayerQueryService
 
     public async Task<PagedResult<PlayerEncounterDetailDto>> GetPlayerEncountersAsync(
         int playerId,
-        string? encounterName,
+        string? encounterEntry,
         string? specName,
         string? role,
         bool? success,
@@ -87,7 +87,7 @@ public sealed class PlayerQueryService : IPlayerQueryService
         CancellationToken cancellationToken = default)
     {
         return await _repository.GetPlayerEncountersAsync(
-            playerId, encounterName, specName, role, success, raidTypeId, startDate, endDate, page, pageSize, cancellationToken);
+            playerId, encounterEntry, specName, role, success, raidTypeId, startDate, endDate, page, pageSize, cancellationToken);
     }
 
     public async Task<List<PlayerEncounterTimelineDto>> GetPlayerEncounterTimelineAsync(

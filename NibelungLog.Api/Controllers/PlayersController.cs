@@ -91,7 +91,7 @@ public sealed class PlayersController : ControllerBase
     [HttpGet("{id:int}/encounters")]
     public async Task<ActionResult<PagedResult<PlayerEncounterDetailDto>>> GetPlayerEncounters(
         int id,
-        [FromQuery] string? encounterName = null,
+        [FromQuery] string? encounterEntry = null,
         [FromQuery] string? specName = null,
         [FromQuery] string? role = null,
         [FromQuery] bool? success = null,
@@ -112,7 +112,7 @@ public sealed class PlayersController : ControllerBase
             return BadRequest("PageSize must be between 1 and 100");
 
         var result = await _playerQueryService.GetPlayerEncountersAsync(
-            id, encounterName, specName, role, success, raidTypeId, startDate, endDate, page, pageSize, cancellationToken);
+            id, encounterEntry, specName, role, success, raidTypeId, startDate, endDate, page, pageSize, cancellationToken);
         
         return Ok(result);
     }

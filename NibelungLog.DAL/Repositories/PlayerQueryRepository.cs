@@ -705,7 +705,7 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
 
     public async Task<PagedResult<PlayerEncounterDetailDto>> GetPlayerEncountersAsync(
         int playerId,
-        string? encounterName,
+        string? encounterEntry,
         string? specName,
         string? role,
         bool? success,
@@ -724,9 +724,8 @@ public sealed class PlayerQueryRepository : IPlayerQueryRepository
             .Include(pe => pe.CharacterSpec)
             .Where(pe => pe.PlayerId == playerId);
 
-        if (!string.IsNullOrWhiteSpace(encounterName))
-            query = query.Where(pe =>
-                pe.Encounter.EncounterName != null && pe.Encounter.EncounterName.Contains(encounterName));
+        if (!string.IsNullOrWhiteSpace(encounterEntry))
+            query = query.Where(pe => pe.Encounter.EncounterEntry == encounterEntry);
 
         if (!string.IsNullOrWhiteSpace(specName))
             query = query.Where(pe => pe.CharacterSpec.Name == specName);

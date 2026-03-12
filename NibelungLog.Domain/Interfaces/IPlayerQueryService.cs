@@ -46,7 +46,7 @@ public interface IPlayerQueryService
     
     Task<PagedResult<PlayerEncounterDetailDto>> GetPlayerEncountersAsync(
         int playerId,
-        string? encounterName,
+        string? encounterEntry,
         string? specName,
         string? role,
         bool? success,

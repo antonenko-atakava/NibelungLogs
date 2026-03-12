@@ -131,8 +131,8 @@ class PlayersApi implements IPlayersApi {
       searchParams.append("page", (params.page || 1).toString());
       searchParams.append("pageSize", (params.pageSize || 25).toString());
       
-      if (params.encounterName)
-        searchParams.append("encounterName", params.encounterName);
+      if (params.encounterEntry)
+        searchParams.append("encounterEntry", params.encounterEntry);
       if (params.specName)
         searchParams.append("specName", params.specName);
       if (params.role)

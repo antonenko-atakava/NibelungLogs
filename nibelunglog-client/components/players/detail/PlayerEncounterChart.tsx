@@ -62,7 +62,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
   
   const [selectedSpec, setSelectedSpec] = useState<string | null>(null);
   const [selectedRaidTypeId, setSelectedRaidTypeId] = useState<number | null>(null);
-  const [selectedEncounterName, setSelectedEncounterName] = useState<string | null>(null);
+  const [selectedEncounterEntry, setSelectedEncounterEntry] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [comparisonPlayerId, setComparisonPlayerId] = useState<number | null>(null);
@@ -70,7 +70,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
 
   const [localSpec, setLocalSpec] = useState<string | null>(null);
   const [localRaidTypeId, setLocalRaidTypeId] = useState<number | null>(null);
-  const [localEncounterName, setLocalEncounterName] = useState<string | null>(null);
+  const [localEncounterEntry, setLocalEncounterEntry] = useState<string | null>(null);
   const [localStartDate, setLocalStartDate] = useState<string>("");
   const [localEndDate, setLocalEndDate] = useState<string>("");
   const [localComparisonPlayerName, setLocalComparisonPlayerName] = useState<string>("");
@@ -96,8 +96,8 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
       try {
         const encounters = await playersApi.getPlayerUniqueEncounters(playerId, localRaidTypeId);
         setUniqueEncounters(encounters);
-        if (localEncounterName && !encounters.some(e => e.encounterName === localEncounterName)) {
-          setLocalEncounterName(null);
+        if (localEncounterEntry && !encounters.some(e => e.encounterEntry === localEncounterEntry)) {
+          setLocalEncounterEntry(null);
         }
       } catch (err) {
         console.error("Failed to load unique encounters:", err);
@@ -126,7 +126,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
             playerId,
             specName: selectedSpec || undefined,
             raidTypeId: selectedRaidTypeId,
-            encounterName: selectedEncounterName || undefined,
+            encounterEntry: selectedEncounterEntry || undefined,
             startDate: startDateParam,
             endDate: endDateParam,
             page,
@@ -158,7 +158,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
     };
 
     fetchEncounters();
-  }, [playerId, selectedSpec, selectedRaidTypeId, selectedEncounterName, startDate, endDate]);
+    }, [playerId, selectedSpec, selectedRaidTypeId, selectedEncounterEntry, startDate, endDate]);
 
   const handleSearchPlayers = async (searchTerm: string) => {
     if (searchTerm.length < 2) {
@@ -185,7 +185,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
   const handleApplyFilters = async () => {
     setSelectedSpec(localSpec);
     setSelectedRaidTypeId(localRaidTypeId);
-    setSelectedEncounterName(localEncounterName);
+    setSelectedEncounterEntry(localEncounterEntry);
     setStartDate(localStartDate);
     setEndDate(localEndDate);
     
@@ -263,7 +263,7 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
             playerId: comparisonPlayerId,
             specName: selectedSpec || undefined,
             raidTypeId: selectedRaidTypeId,
-            encounterName: selectedEncounterName || undefined,
+            encounterEntry: selectedEncounterEntry || undefined,
             startDate: startDateParam,
             endDate: endDateParam,
             page,
@@ -293,27 +293,27 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
     };
 
     fetchComparisonEncounters();
-  }, [comparisonPlayerId, selectedSpec, selectedRaidTypeId, selectedEncounterName, startDate, endDate]);
+  }, [comparisonPlayerId, selectedSpec, selectedRaidTypeId, selectedEncounterEntry, startDate, endDate]);
 
   useEffect(() => {
     if (isFiltersOpen) {
       setLocalSpec(selectedSpec);
       setLocalRaidTypeId(selectedRaidTypeId);
-      setLocalEncounterName(selectedEncounterName);
+      setLocalEncounterEntry(selectedEncounterEntry);
       setLocalStartDate(startDate);
       setLocalEndDate(endDate);
       setLocalComparisonPlayerName(comparisonPlayerName);
     }
-  }, [isFiltersOpen, selectedSpec, selectedRaidTypeId, selectedEncounterName, startDate, endDate, comparisonPlayerName]);
+  }, [isFiltersOpen, selectedSpec, selectedRaidTypeId, selectedEncounterEntry, startDate, endDate, comparisonPlayerName]);
 
   useEffect(() => {
-    if (localRaidTypeId && localEncounterName) {
-      const isEncounterInRaid = uniqueEncounters.some(e => e.encounterName === localEncounterName);
+    if (localRaidTypeId && localEncounterEntry) {
+      const isEncounterInRaid = uniqueEncounters.some(e => e.encounterEntry === localEncounterEntry);
       if (!isEncounterInRaid) {
-        setLocalEncounterName(null);
+        setLocalEncounterEntry(null);
       }
     }
-  }, [uniqueEncounters, localRaidTypeId, localEncounterName]);
+  }, [uniqueEncounters, localRaidTypeId, localEncounterEntry]);
 
   const formatNumber = (value: number): string => {
     return Math.round(value).toLocaleString("ru-RU");
@@ -743,14 +743,14 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
                       </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Энкаунтер</label>
-            <Select value={localEncounterName || "all"} onValueChange={(value) => setLocalEncounterName(value === "all" ? null : value)}>
+            <Select value={localEncounterEntry || "all"} onValueChange={(value) => setLocalEncounterEntry(value === "all" ? null : value)}>
               <SelectTrigger className="h-10 w-full">
                 <SelectValue placeholder="Все энкаунтеры" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Все энкаунтеры</SelectItem>
                 {uniqueEncounters.map((encounter) => (
-                  <SelectItem key={encounter.encounterEntry} value={encounter.encounterName}>
+                  <SelectItem key={encounter.encounterEntry} value={encounter.encounterEntry}>
                     {getEncounterName(encounter.encounterEntry)}
                   </SelectItem>
                 ))}

@@ -55,7 +55,7 @@ export interface GetPlayersByEncounterParams {
 
 export interface GetPlayerEncountersParams {
   playerId: number;
-  encounterName?: string;
+  encounterEntry?: string;
   specName?: string;
   role?: string;
   success?: boolean;
