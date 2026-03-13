@@ -34,6 +34,8 @@ import type { PlayerEncounterDetailDto, PlayerSpecStatisticsDto } from "@/types/
 import type { RaidTypeDto } from "@/types/api/RaidType";
 import type { EncounterListItemDto } from "@/types/api/Encounter";
 
+const FLAME_LEVIATHAN_ENTRY = "33113";
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -95,8 +97,9 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
     const fetchUniqueEncounters = async () => {
       try {
         const encounters = await playersApi.getPlayerUniqueEncounters(playerId, localRaidTypeId);
-        setUniqueEncounters(encounters);
-        if (localEncounterEntry && !encounters.some(e => e.encounterEntry === localEncounterEntry)) {
+        const filteredEncounters = encounters.filter(e => e.encounterEntry !== FLAME_LEVIATHAN_ENTRY);
+        setUniqueEncounters(filteredEncounters);
+        if (localEncounterEntry && !filteredEncounters.some(e => e.encounterEntry === localEncounterEntry)) {
           setLocalEncounterEntry(null);
         }
       } catch (err) {
@@ -142,7 +145,8 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
           }
         }
 
-        const sortedEncounters = allEncounters.sort((a, b) => 
+        const filteredEncounters = allEncounters.filter(e => e.encounterEntry !== FLAME_LEVIATHAN_ENTRY);
+        const sortedEncounters = filteredEncounters.sort((a, b) => 
           new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
         );
 
@@ -228,13 +232,13 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
   const handleClearFilters = () => {
     setLocalSpec(null);
     setLocalRaidTypeId(null);
-    setLocalEncounterName(null);
+    setLocalEncounterEntry(null);
     setLocalStartDate("");
     setLocalEndDate("");
     setLocalComparisonPlayerName("");
     setSelectedSpec(null);
     setSelectedRaidTypeId(null);
-    setSelectedEncounterName(null);
+    setSelectedEncounterEntry(null);
     setStartDate("");
     setEndDate("");
     setComparisonPlayerId(null);
@@ -270,7 +274,8 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
             pageSize,
           });
 
-          allEncounters.push(...result.items);
+          const filteredItems = result.items.filter(e => e.encounterEntry !== FLAME_LEVIATHAN_ENTRY);
+          allEncounters.push(...filteredItems);
 
           if (result.items.length < pageSize || page * pageSize >= result.totalCount) {
             hasMore = false;
@@ -279,7 +284,8 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
           }
         }
 
-        const sortedEncounters = allEncounters.sort((a, b) => 
+        const filteredEncounters = allEncounters.filter(e => e.encounterEntry !== FLAME_LEVIATHAN_ENTRY);
+        const sortedEncounters = filteredEncounters.sort((a, b) => 
           new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
         );
 
