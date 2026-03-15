@@ -304,6 +304,7 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
                 pe.Dps,
                 pe.DamageDone,
                 pe.HealingDone,
+                pe.AbsorbProvided,
                 pe.MaxGearScore,
                 pe.Encounter.EncounterEntry,
                 Duration = (pe.Encounter.EndTime - pe.Encounter.StartTime).TotalSeconds,
@@ -322,19 +323,19 @@ public sealed class GuildQueryRepository : IGuildQueryRepository
                 MaxDps = g.Any() ? g.Max(pe => pe.Dps) : 0.0,
                 AverageHps = g.Where(pe => pe.Role == "2" && pe.Duration > 0).Any()
                     ? g.Where(pe => pe.Role == "2" && pe.Duration > 0)
-                        .Select(pe => (double)pe.HealingDone / pe.Duration)
+                        .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / pe.Duration)
                         .Average()
                     : (double?)null,
                 MaxHps = g.Where(pe => pe.Role == "2" && pe.Duration > 0).Any()
                     ? g.Where(pe => pe.Role == "2" && pe.Duration > 0)
-                        .Select(pe => (double)pe.HealingDone / pe.Duration)
+                        .Select(pe => (double)(pe.HealingDone + pe.AbsorbProvided) / pe.Duration)
                         .Max()
                     : (double?)null,
                 BestSpecName = g.OrderByDescending(pe => pe.Dps)
                     .Select(pe => pe.SpecName)
                     .FirstOrDefault(),
                 BestRole = g.OrderByDescending(pe => pe.Role == "2" && pe.Duration > 0
-                    ? (double)pe.HealingDone / pe.Duration
+                    ? (double)(pe.HealingDone + pe.AbsorbProvided) / pe.Duration
                     : pe.Dps)
                     .Select(pe => pe.Role)
                     .FirstOrDefault()
