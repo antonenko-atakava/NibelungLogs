@@ -145,7 +145,9 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
           }
         }
 
-        const filteredEncounters = allEncounters.filter(e => e.encounterEntry !== FLAME_LEVIATHAN_ENTRY);
+        const filteredEncounters = allEncounters.filter(e => 
+          e.encounterEntry !== FLAME_LEVIATHAN_ENTRY && e.success
+        );
         const sortedEncounters = filteredEncounters.sort((a, b) => 
           new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
         );
@@ -274,7 +276,9 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
             pageSize,
           });
 
-          const filteredItems = result.items.filter(e => e.encounterEntry !== FLAME_LEVIATHAN_ENTRY);
+          const filteredItems = result.items.filter(e => 
+            e.encounterEntry !== FLAME_LEVIATHAN_ENTRY && e.success
+          );
           allEncounters.push(...filteredItems);
 
           if (result.items.length < pageSize || page * pageSize >= result.totalCount) {
@@ -284,7 +288,9 @@ export function PlayerEncounterChart({ playerId, specStatistics = [] }: PlayerEn
           }
         }
 
-        const filteredEncounters = allEncounters.filter(e => e.encounterEntry !== FLAME_LEVIATHAN_ENTRY);
+        const filteredEncounters = allEncounters.filter(e => 
+          e.encounterEntry !== FLAME_LEVIATHAN_ENTRY && e.success
+        );
         const sortedEncounters = filteredEncounters.sort((a, b) => 
           new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
         );
