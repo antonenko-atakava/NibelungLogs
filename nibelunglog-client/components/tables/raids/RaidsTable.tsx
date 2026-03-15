@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -79,7 +80,14 @@ export function RaidsTable({ raids, isLoading }: RaidsTableProps) {
               key={raid.id}
               className="hover:bg-secondary/20 transition-colors border-b border-border/20"
             >
-              <TableCell className="font-semibold text-base">{raid.raidTypeName}</TableCell>
+              <TableCell>
+                <Link
+                  href={`/raids/${raid.id}`}
+                  className="font-semibold text-base hover:text-primary transition-colors"
+                >
+                  {raid.raidTypeName}
+                </Link>
+              </TableCell>
               <TableCell className="text-sm">{raid.guildName || "-"}</TableCell>
               <TableCell className="text-sm">{raid.leaderName || "-"}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
