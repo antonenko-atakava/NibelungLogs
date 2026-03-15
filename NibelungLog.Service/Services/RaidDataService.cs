@@ -247,7 +247,8 @@ public sealed class RaidDataService : IRaidDataService
                     Tanks = int.Parse(encounter.Tanks),
                     Healers = int.Parse(encounter.Healers),
                     DamageDealers = int.Parse(encounter.DamageDealers),
-                    AverageGearScore = encounter.AverageGearScore
+                    AverageGearScore = encounter.AverageGearScore,
+                    Hardmode = encounter.Hardmode
                 };
                 newEncounters.Add(savedEncounter);
                 savedEncountersDict[encounterKey] = savedEncounter;

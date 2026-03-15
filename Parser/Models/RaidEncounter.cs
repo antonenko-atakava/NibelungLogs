@@ -51,4 +51,7 @@ public class RaidEncounter
 
     [JsonProperty("damage_dealers")]
     public string DamageDealers { get; set; }
+
+    [JsonProperty("hardmode")]
+    public string? Hardmode { get; set; }
 }

@@ -62,7 +62,8 @@ public static class ParserMapper
             MaxGearScore = encounter.MaxGearScore,
             Tanks = encounter.Tanks,
             Healers = encounter.Healers,
-            DamageDealers = encounter.DamageDealers
+            DamageDealers = encounter.DamageDealers,
+            Hardmode = encounter.Hardmode
         };
     }
 

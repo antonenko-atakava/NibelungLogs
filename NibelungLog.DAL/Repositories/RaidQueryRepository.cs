@@ -127,7 +127,8 @@ public sealed class RaidQueryRepository : IRaidQueryRepository
                 TotalHealing = e.TotalHealing,
                 Tanks = e.Tanks,
                 Healers = e.Healers,
-                DamageDealers = e.DamageDealers
+                DamageDealers = e.DamageDealers,
+                Hardmode = e.Hardmode
             })
             .ToListAsync(cancellationToken);
 

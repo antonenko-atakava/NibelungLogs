@@ -101,9 +101,16 @@ export function RaidEncountersTable({ encounters }: RaidEncountersTableProps) {
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium">
-                        {getEncounterName(encounter.encounterEntry)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {getEncounterName(encounter.encounterEntry)}
+                        </span>
+                        {encounter.hardmode === "1" && encounter.success && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                            HM
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">

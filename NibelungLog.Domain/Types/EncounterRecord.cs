@@ -57,4 +57,7 @@ public sealed record EncounterRecord
     
     [JsonPropertyName("encounter_name_loc8")]
     public string? EncounterNameLoc8 { get; init; }
+    
+    [JsonPropertyName("hardmode")]
+    public string? Hardmode { get; init; }
 }

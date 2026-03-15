@@ -15,6 +15,7 @@ public sealed class Encounter
     public required int Healers { get; set; }
     public required int DamageDealers { get; set; }
     public required string AverageGearScore { get; set; }
+    public string? Hardmode { get; set; }
     
     public Raid Raid { get; set; } = null!;
     public List<PlayerEncounter> PlayerEncounters { get; set; } = [];

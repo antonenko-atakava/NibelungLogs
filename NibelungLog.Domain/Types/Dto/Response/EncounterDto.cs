@@ -13,4 +13,5 @@ public sealed class EncounterDto
     public int Tanks { get; set; }
     public int Healers { get; set; }
     public int DamageDealers { get; set; }
+    public string? Hardmode { get; set; }
 }

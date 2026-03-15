@@ -44,4 +44,5 @@ export interface EncounterDto {
   tanks: number;
   healers: number;
   damageDealers: number;
+  hardmode?: string | null;
 }
